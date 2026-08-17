@@ -1935,6 +1935,7 @@ def maybe_finish_round(code,token=None,force=False):
     if room.get("status")=="playing":
         start_round(code)
 
+init_db()
 
 register_parchis(app, socketio, active_rooms, current_user, find_player, friends_of, connected_users, finalize_game_progress)
 register_uno_deluxe(app, socketio, active_rooms, current_user, friends_of)
