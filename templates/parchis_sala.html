@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Sala Parchís {{ codigo }}{% endblock %}
+{% block content %}
+<header class="topbar">
+  <div class="brand-mini"><span>🎲🎲</span><strong>PARCHÍS DELUXE</strong></div>
+  <a class="back-link" href="{{ url_for('juegos') }}">← Juegos</a>
+</header>
+
+<section class="parchis-lobby-hero">
+  <div>
+    <span class="eyebrow">PARCHÍS DE DOS DADOS</span>
+    <h1>Elige tus colores</h1>
+    <p>Con 2 jugadores podéis jugar con 2 colores en total o usar los 4. Cada jugador elige 1 o 2 colores. Con 3 o 4 jugadores, uno por jugador.</p>
+  </div>
+  <div class="room-code-box"><small>CÓDIGO DE SALA</small><strong>{{ codigo }}</strong><span>Máximo 4 jugadores</span></div>
+</section>
+
+<section class="parchis-lobby-layout">
+  <div class="card panel">
+    <div class="panel-head">
+      <div><span class="eyebrow">JUGADORES</span><h3><span id="count">1</span> / 4</h3></div>
+      <span class="status-dot"></span>
+    </div>
+
+    <div id="players" class="parchis-player-grid"></div>
+
+    <div class="parchis-rules-strip">
+      <span>🎲🎲 Dos dados</span>
+      <span>5️⃣ Salida con 5</span>
+      <span>🚧 Barreras</span>
+      <span>🍽️ Comer = 20</span>
+      <span>🏁 Meta = 10</span>
+    </div>
+
+    {% if user.id == sala.host_id %}
+    <div class="parchis-host-controls">
+      <button class="cpu-button" onclick="socket.emit('parchis_add_cpu',{code:CODE})">＋ 🤖 AÑADIR CPU</button>
+      <button class="parchis-start" onclick="socket.emit('parchis_start',{code:CODE})">🎲🎲 EMPEZAR PARTIDA</button>
+    </div>
+    {% else %}
+    <div class="waiting-banner">⏳ Esperando a que el anfitrión empiece…</div>
+    {% endif %}
+  </div>
+
+  {% if user.id == sala.host_id %}
+  <aside class="card panel">
+    <span class="eyebrow">INVITAR</span>
+    <h3>Amigos conectados</h3>
+    <div class="friend-list">
+      {% for amigo in amigos %}
+      <div class="friend-row">
+        <span class="avatar">{{ amigo.username[0]|upper }}</span>
+        <div><strong>{{ amigo.username }} <span class="stars-mini">⭐ {{ amigo.stars }}</span></strong><small id="st-{{ amigo.id }}">Comprobando...</small></div>
+        <button class="invite-small" id="inv-{{ amigo.id }}" onclick="inviteFriend({{ amigo.id }},this)">INVITAR</button>
+      </div>
+      {% else %}
+      <div class="empty">No tienes amigos añadidos.</div>
+      {% endfor %}
+    </div>
+  </aside>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const socket=io(),CODE="{{ codigo }}",ME={{ user.id }},HOST={{ sala.host_id }};
+const COLORS=["rojo","azul","verde","amarillo"];
+const LABELS={rojo:"Rojo",azul:"Azul",verde:"Verde",amarillo:"Amarillo"};
+
+socket.on("connect",()=>socket.emit("parchis_join_lobby",{code:CODE}));
+socket.on("parchis_lobby_state",renderLobby);
+socket.on("parchis_started",d=>{
+  if(d.code===CODE) location.href="/parchis/"+d.code;
+});
+
+/* Respaldo: aunque se pierda el evento Socket.IO, todos entran al empezar. */
+setInterval(async()=>{
+  try{
+    const r=await fetch("/estado_parchis/"+CODE,{cache:"no-store"});
+    if(!r.ok)return;
+    const d=await r.json();
+    if(d.status==="playing") location.href="/parchis/"+CODE;
+  }catch(e){}
+},1000);
+socket.on("app_error",d=>toast(d.message));
+socket.on("toast",d=>toast(d.message));
+
+function renderLobby(d){
+  document.getElementById("count").textContent=d.players.length;
+  const maxColors=d.players.length===2?2:1;
+  const used=new Set(d.players.flatMap(p=>p.colors||[]));
+
+  document.getElementById("players").innerHTML=d.players.map(p=>`
+    <div class="parchis-player-card ${p.bot?'bot':''}">
+      ${p.bot&&ME===HOST?`<button class="remove-cpu" onclick="socket.emit('parchis_remove_cpu',{code:CODE,bot_id:'${p.id}'})">×</button>`:''}
+      <div class="parchis-avatar">${p.bot&&!p.fake_user?'🤖':p.name[0].toUpperCase()}</div>
+      <strong>${p.name} <span class="stars-mini">⭐ ${p.stars||0}</span></strong>
+      <small>${p.id===d.host_id?'👑 ANFITRIÓN':p.bot&&!p.fake_user?'CPU · colores automáticos':p.fake_user?'RIVAL ONLINE':`Elige ${maxColors===2?"1 o 2 colores":"1 color"}`}</small>
+      <div class="color-picker">
+        ${COLORS.map(c=>{
+          const selected=(p.colors||[]).includes(c);
+          const unavailable=used.has(c)&&!selected;
+          return `<button class="color-choice ${c} ${selected?'selected':''}" 
+             ${p.id!==ME||p.bot||unavailable?'disabled':''}
+             onclick="chooseColor('${c}')">
+             ${selected?'✓ ':''}${LABELS[c]}
+          </button>`;
+        }).join("")}
+      </div>
+    </div>`).join("");
+}
+function chooseColor(c){socket.emit("parchis_choose_color",{code:CODE,color:c});}
+function inviteFriend(id,b){socket.emit("invite_to_room",{code:CODE,friend_id:id});b.textContent="ENVIADA ✓";b.disabled=true;setTimeout(()=>{b.textContent="INVITAR";refreshFriends()},1800)}
+async function refreshFriends(){try{const s=await(await fetch("/estado_amigos")).json();Object.entries(s).forEach(([id,on])=>{const st=document.getElementById("st-"+id),b=document.getElementById("inv-"+id);if(st){st.textContent=on?"● ONLINE":"● DESCONECTADO";st.className=on?"online-label":"offline-label"}if(b)b.disabled=!on})}catch(e){}}
+function toast(t){const e=document.createElement("div");e.className="live-toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
+refreshFriends();setInterval(refreshFriends,3000);
+</script>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block title %}Parchís Deluxe{% endblock %}
+{% block content %}
+<div class="parchis-shell"><header class="parchis-top"><div><span class="eyebrow">PARCHÍS DELUXE</span><strong>SALA {{ codigo }}</strong></div><div id="turnText" class="turn-pill">Preparando…</div></header>
+<main class="parchis-layout"><section class="board-wrap"><div class="parchis-board">
+<div class="home home-rojo"><b>ROJO</b><div id="home-rojo" class="home-pieces"></div></div><div class="home home-azul"><b>AZUL</b><div id="home-azul" class="home-pieces"></div></div>
+<div class="home home-verde"><b>VERDE</b><div id="home-verde" class="home-pieces"></div></div><div class="home home-amarillo"><b>AMARILLO</b><div id="home-amarillo" class="home-pieces"></div></div>
+<div class="center-goal">🏆<strong>META</strong></div><div id="piecesLayer" class="pieces-layer"></div></div></section>
+<aside class="parchis-side"><div class="card dice-card"><span class="eyebrow">DADO</span><div id="dice" class="big-dice">?</div><button id="rollBtn" class="roll-button" onclick="rollDice()">LANZAR DADO</button><p id="eventText">Esperando jugada…</p></div><div class="card panel"><span class="eyebrow">JUGADORES</span><div id="scoreList"></div></div></aside></main></div>
+<div id="gameOver" class="gameover hidden"><div class="gameover-card"><div class="trophy">🏆</div><h1 id="winner"></h1><div id="ranking"></div><a href="{{ url_for('juegos') }}" class="start-button replay">VOLVER A JUEGOS</a></div></div>
+{% endblock %}
+{% block scripts %}<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script><script>
+const socket=io(),CODE="{{ codigo }}",ME={{ user.id }};let STATE={{ sala|tojson }},movable=[];
+socket.on("connect",()=>socket.emit("parchis_join",{code:CODE}));socket.on("parchis_state",d=>{STATE=d;movable=[];render()});socket.on("parchis_roll_result",d=>{STATE=d.state;movable=d.movable||[];animateDice(d.dice);render()});socket.on("parchis_game_over",showOver);
+function rollDice(){if(STATE.turn_player_id===ME&&!STATE.rolled)socket.emit("parchis_roll",{code:CODE})}function movePiece(id){if(movable.includes(id))socket.emit("parchis_move",{code:CODE,piece_id:id})}
+function trackXY(color,pos){const o={rojo:0,azul:17,verde:34,amarillo:51}[color],p=(o+pos)%68,a=(p/68)*Math.PI*2-Math.PI/2;return{x:50+Math.cos(a)*43-2,y:50+Math.sin(a)*43-2}}
+function finishXY(color,p){const d={rojo:{x:50,y:88,dx:0,dy:-5.2},azul:{x:88,y:50,dx:-5.2,dy:0},verde:{x:50,y:12,dx:0,dy:5.2},amarillo:{x:12,y:50,dx:5.2,dy:0}}[color];return{x:d.x+d.dx*p-2,y:d.y+d.dy*p-2}}
+function render(){document.getElementById("turnText").textContent=STATE.turn_player_id===ME?"🎲 TU TURNO":"Turno de "+((STATE.players.find(p=>p.id===STATE.turn_player_id)||{}).name||"…");document.getElementById("rollBtn").disabled=STATE.turn_player_id!==ME||STATE.rolled;document.getElementById("eventText").textContent=STATE.last_event||"Esperando jugada…";if(!STATE.rolled)document.getElementById("dice").textContent="?";renderScores();renderPieces()}
+function renderScores(){document.getElementById("scoreList").innerHTML=STATE.players.map(p=>`<div class="parchis-score ${p.id===STATE.turn_player_id?'active':''}"><span>${p.name[0].toUpperCase()}</span><div><strong>${p.name}</strong><small>${(p.colors||[]).join(" + ")}</small></div><em>${p.score} pts</em></div>`).join("")}
+function renderPieces(){document.querySelectorAll(".home-pieces").forEach(e=>e.innerHTML="");const l=document.getElementById("piecesLayer");l.innerHTML="";Object.entries(STATE.colors).forEach(([c,d])=>d.pieces.forEach(p=>{const e=document.createElement("button");e.className=`piece piece-${c} ${movable.includes(p.id)?'movable':''}`;e.textContent=p.n;e.onclick=()=>movePiece(p.id);if(p.state==="home")document.getElementById("home-"+c).appendChild(e);else{let xy=p.state==="track"?trackXY(c,p.pos):p.state==="finish"?finishXY(c,p.finish_pos):{x:48,y:48};e.style.left=xy.x+"%";e.style.top=xy.y+"%";l.appendChild(e)}}))}
+function animateDice(n){const e=document.getElementById("dice");let i=0,t=setInterval(()=>{e.textContent=1+Math.floor(Math.random()*6);if(++i>8){clearInterval(t);e.textContent=n}},70)}
+function showOver(d){document.getElementById("gameOver").classList.remove("hidden");document.getElementById("winner").textContent=d.winner+" gana la partida";document.getElementById("ranking").innerHTML=d.players.map((p,i)=>`<div class="rank-row"><b>#${i+1}</b><span>${p.name}</span><strong>${p.score} pts</strong></div>`).join("")}render();
+</script>{% endblock %}

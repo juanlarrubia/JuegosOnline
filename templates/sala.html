@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Sala {{ codigo }} · {{ sala.game_name }}{% endblock %}
+{% block content %}
+<header class="topbar">
+  <div class="brand-mini"><span>⚡</span><strong>RETO RELÁMPAGO</strong></div>
+  <a class="back-link" href="{{ url_for('menu') }}">← Salir</a>
+</header>
+
+<section class="lobby-hero">
+  <div>
+    <span class="eyebrow">SALA DE ESPERA</span>
+    <h1>Reúne a tu equipo</h1>
+    <p>Invita amigos o comparte el código. Todos entrarán automáticamente cuando empiece.</p>
+  </div>
+  <div class="room-code-box"><small>CÓDIGO DE SALA</small><strong>{{ codigo }}</strong><span>Compártelo con quien quieras</span><button class="copy-code-btn" onclick="copyCode()">📋 COPIAR</button></div>
+</section>
+
+<section class="lobby-grid">
+  <div class="card panel lobby-main">
+    <div class="panel-head">
+      <div><span class="eyebrow">JUGADORES</span><h3><span id="playerCount">1</span> en la sala</h3></div>
+      <span class="status-dot"></span>
+    </div>
+    <div id="roomPlayers" class="player-grid"></div>
+    {% if user.id == sala.host_id %}
+    <div class="host-controls">
+      <button class="cpu-button" onclick="socket.emit('add_bot',{code:CODE})">＋ 🤖 AÑADIR RIVAL CPU</button>
+      <button class="start-button" onclick="socket.emit('start_game',{code:CODE})">⚡ EMPEZAR PARTIDA</button>
+    </div>
+    {% else %}
+    <div class="waiting-banner">⏳ Esperando a que <strong>{{ sala.host_name }}</strong> inicie la partida...</div>
+    {% endif %}
+  </div>
+
+  {% if user.id == sala.host_id %}
+  <aside class="card panel invite-panel">
+    <span class="eyebrow">INVITAR</span>
+    <h3>Amigos conectados</h3>
+    <p class="muted">Puedes invitar a tantos como quieras.</p>
+    <div class="friend-list">
+      {% for amigo in amigos %}
+      <div class="friend-row">
+        <span class="avatar">{{ amigo.username[0]|upper }}</span>
+        <div><strong>{{ amigo.username }}</strong><small id="st-{{ amigo.id }}">Comprobando...</small></div>
+        <button class="invite-small" id="inv-{{ amigo.id }}" onclick="inviteFriend({{ amigo.id }})">INVITAR</button>
+      </div>
+      {% else %}
+      <div class="empty">Añade amigos desde el menú principal.</div>
+      {% endfor %}
+    </div>
+  </aside>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const socket=io(), CODE="{{ codigo }}", ME={{ user.id }}, HOST={{ sala.host_id }};
+socket.on("connect",()=>socket.emit("join_lobby",{code:CODE}));
+socket.on("lobby_state",renderLobby);
+socket.on("game_started",d=>{
+  if(d.code===CODE) location.href="/partida/"+d.code;
+});
+
+/* Respaldo para móviles/navegadores que pierdan el evento Socket.IO. */
+setInterval(async()=>{
+  try{
+    const r=await fetch("/estado_reto/"+CODE,{cache:"no-store"});
+    if(!r.ok)return;
+    const d=await r.json();
+    if(d.status==="playing") location.href="/partida/"+CODE;
+  }catch(e){}
+},1000);
+socket.on("toast",d=>toast(d.message));
+socket.on("app_error",d=>toast(d.message));
+
+function renderLobby(d){
+  document.getElementById("playerCount").textContent=d.players.length;
+  document.getElementById("roomPlayers").innerHTML=d.players.map(p=>`
+    <div class="player-tile ${p.bot?'bot':''}">
+      <div class="player-orb">${p.bot&&!p.fake_user?'🤖':p.name[0].toUpperCase()}</div>
+      <strong>${p.name} <span class="stars-mini">⭐ ${p.stars||0}</span></strong>
+      <small>${p.id===d.host_id?'👑 ANFITRIÓN':p.bot&&!p.fake_user?'CPU':p.fake_user?'RIVAL ONLINE':'LISTO'}</small>
+      ${p.bot && ME===HOST?`<button onclick="socket.emit('remove_bot',{code:CODE,bot_id:'${p.id}'})">×</button>`:''}
+    </div>`).join("");
+}
+function copyCode(){
+  navigator.clipboard?.writeText(CODE);
+  toast("Código "+CODE+" copiado");
+}
+function inviteFriend(id){
+  socket.emit("invite_to_room",{code:CODE,friend_id:id});
+  toast("Invitación enviada");
+}
+async function refreshFriends(){
+  const r=await fetch("/estado_amigos"); const s=await r.json();
+  Object.entries(s).forEach(([id,on])=>{
+    const st=document.getElementById("st-"+id), b=document.getElementById("inv-"+id);
+    if(st){st.textContent=on?"● ONLINE":"● DESCONECTADO";st.className=on?"online-label":"offline-label";}
+    if(b)b.disabled=!on;
+  });
+}
+function toast(t){const e=document.createElement("div");e.className="live-toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2200)}
+refreshFriends(); setInterval(refreshFriends,3000);
+</script>
+{% endblock %}

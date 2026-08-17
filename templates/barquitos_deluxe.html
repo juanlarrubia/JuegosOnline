@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% block content %}<div class="newgame-shell"><h1>⚓ Batalla Naval</h1><div class="game-hud"><b id="np">COLOCA TU FLOTA</b><span id="si">5 barcos por colocar</span></div><div class="game-controls"><button class="game-play secondary" onclick="rot()">↻ GIRAR</button><button id="ready" class="game-play" onclick="go()" disabled>EMPEZAR</button></div><div class="fleet-dock"><div>🛳️ <b>Portaaviones</b> · 5</div><div>🚢 <b>Acorazado</b> · 4</div><div>⛴️ <b>Crucero</b> · 3</div><div>🛥️ <b>Submarino</b> · 3</div><div>🚤 <b>Destructor</b> · 2</div></div><div id="nm" class="game-message">Coloca tu flota en el océano.</div><div class="naval-layout"><div><h3>TU FLOTA</h3><div id="own" class="naval-grid"></div></div><div><h3>CPU</h3><div id="enemy" class="naval-grid enemy"></div></div></div></div><script>
+let resultReported=false;
+function reportGameResult(won){
+ if(resultReported)return;resultReported=true;
+ fetch("/api/progreso/resultado",{method:"POST",headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({game:"barquitos_deluxe",code:"{{codigo}}",won:won,vs_cpu:true})}).catch(()=>{});
+}
+let O=Array(100).fill(0),E=Array(100).fill(0),S=Array(100).fill(0),ES=Array(100).fill(0),ships=[5,4,3,3,2],pi=0,h=true,battle=false;
+const AC=window.AudioContext||window.webkitAudioContext;let ac;
+function tone(freq,dur,type="sine",vol=.12){try{ac=ac||new AC();let o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(vol,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur)}catch(e){}}
+function shotSound(){tone(120,.08,"square",.16);setTimeout(()=>tone(70,.14,"sawtooth",.12),60)}
+function splashSound(){tone(280,.08,"sine",.08);setTimeout(()=>tone(180,.18,"sine",.06),70)}
+function boomSound(){tone(90,.22,"sawtooth",.18);setTimeout(()=>tone(55,.35,"square",.10),80)}function cells(i,l){let r=Math.floor(i/10),c=i%10,o=[];for(let k=0;k<l;k++){let rr=r+(h?0:k),cc=c+(h?k:0);if(rr>9||cc>9)return[];o.push(rr*10+cc)}return o}
+function render(){own.innerHTML=O.map((v,i)=>`<button class="sea-cell ${v?"ship ship-"+v:""} ${ES[i]===1?"miss":""} ${ES[i]===2?"hit":""}" onclick="place(${i})"></button>`).join("");enemy.innerHTML=E.map((v,i)=>`<button class="sea-cell ${S[i]===1?"miss":""} ${S[i]===2?"hit":""}" onclick="fire(${i})"></button>`).join("");si.textContent=battle?`Impactos ${S.filter(x=>x===2).length}/17`:`${ships.length-pi} barcos por colocar`;ready.disabled=pi<5}function rot(){h=!h;nm.textContent="Orientación "+(h?"horizontal":"vertical")}
+function place(i){if(battle||pi>=5)return;let c=cells(i,ships[pi]);if(!c.length||c.some(x=>O[x]))return nm.textContent="❌ Ese barco no cabe ahí.";c.forEach(x=>O[x]=pi+1);pi++;nm.textContent=pi<5?`Ahora coloca el barco de ${ships[pi]} casillas.`:"✅ Flota preparada.";render()}
+function cpuFleet(){for(let id=1;id<=5;id++){let ok=false;while(!ok){h=Math.random()>.5;let c=cells(Math.floor(Math.random()*100),ships[id-1]);if(c.length&&!c.some(x=>E[x])){c.forEach(x=>E[x]=id);ok=true}}}h=true}function go(){cpuFleet();battle=true;np.textContent="BATALLA";nm.textContent="Dispara al tablero enemigo.";render()}
+function fire(i){if(!battle||S[i])return;shotSound();S[i]=E[i]?2:1;setTimeout(()=>E[i]?boomSound():splashSound(),120);nm.textContent=E[i]?"💥 ¡TOCADO!":"🌊 Agua";if(S.filter(x=>x===2).length===17){battle=false;nm.textContent="🏆 ¡HAS GANADO!";reportGameResult(true);return render()}render();setTimeout(cpuFire,500)}function cpuFire(){shotSound();let f=ES.map((x,i)=>x?null:i).filter(x=>x!==null),i=f[Math.floor(Math.random()*f.length)];ES[i]=O[i]?2:1;if(ES.filter(x=>x===2).length===17){battle=false;nm.textContent="🤖 CPU ha hundido tu flota.";reportGameResult(false)}render()}render();
+</script>
+<script>
+fetch("/api/progreso/jugada",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({game:"barquitos_deluxe",code:"{{ codigo }}"})
+}).then(r=>r.json()).then(d=>{
+  if(d.new_medals&&d.new_medals.length){
+    d.new_medals.forEach(m=>{
+      const e=document.createElement("div");e.className="live-toast medal-toast";
+      e.textContent=`🏅 ${m.title} · +${m.stars} ⭐`;
+      document.body.appendChild(e);setTimeout(()=>e.remove(),3500);
+    });
+  }
+}).catch(()=>{});
+</script>
+{% endblock %}

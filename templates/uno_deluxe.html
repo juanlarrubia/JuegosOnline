@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block title %}UNO Deluxe · Juegos Online{% endblock %}
+{% block content %}
+<div class="uno2-shell">
+  <header class="uno2-head">
+    <div><small>JUEGO DE CARTAS · SALA {{ codigo }}</small><h1>UNO Deluxe</h1></div>
+    <div class="uno2-status">
+      <b id="turn">CONECTANDO…</b>
+      <span id="opponentInfo">Rival</span>
+    </div>
+  </header>
+
+  <main class="uno2-table">
+    <section class="uno2-center">
+      <button id="deck" class="uno2-deck disabled" type="button" aria-label="Mazo de robo">
+        <i></i><i></i><i></i><div class="uno2-back"><span>UNO</span></div>
+        <small id="dn">0</small>
+      </button>
+      <div id="disc" class="uno2-discard"></div>
+    </section>
+    <div id="msg" class="uno2-message">Preparando partida…</div>
+  </main>
+
+  <section class="uno2-hand-area">
+    <div class="uno2-hand-title">
+      <b>TUS CARTAS · <span class="stars-mini">⭐ {{ user.stars }}</span></b>
+      <span id="handCount">0 cartas</span>
+    </div>
+    <div id="hand" class="uno2-hand"></div>
+  </section>
+
+  <nav class="uno2-controls">
+    <button id="drawBtn" type="button" disabled>🃏 ROBAR</button>
+    <button id="passBtn" type="button" disabled>⏭ PASAR</button>
+    <button id="unoBtn" class="uno-call" type="button" disabled>📣 ¡UNO!</button>
+    <button id="catchBtn" class="uno-catch" type="button" disabled>⚠️ ¡NO DIJO UNO!</button>
+  </nav>
+</div>
+
+<div id="colorPicker" class="uno2-modal" hidden>
+  <div class="uno2-picker">
+    <h2>Elige color</h2>
+    <div>
+      <button data-color="red" aria-label="Rojo"></button>
+      <button data-color="yellow" aria-label="Amarillo"></button>
+      <button data-color="green" aria-label="Verde"></button>
+      <button data-color="blue" aria-label="Azul"></button>
+    </div>
+  </div>
+</div>
+
+<div id="unoOver" class="gameover bingo-over hidden" style="display:none">
+  <div class="gameover-card bingo-over-card">
+    <div class="trophy">🏆</div>
+    <span class="eyebrow">PARTIDA TERMINADA</span>
+    <h1 id="unoWinner"></h1>
+    <div class="bingo-end-actions">
+      <a class="start-button replay" href="/sala_uno_deluxe/{{ codigo }}">🔁 VOLVER A LA SALA</a>
+      <a class="start-button menu-end" href="{{ url_for('menu') }}">🏠 MENÚ PRINCIPAL</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var CODE="{{ codigo }}";
+  var ME={{ user.id }};
+  var socket=io();
+  var state=null;
+  var audioCtx=null;
+
+  var turnEl=document.getElementById("turn");
+  var opponentInfoEl=document.getElementById("opponentInfo");
+  var deckCountEl=document.getElementById("dn");
+  var discardEl=document.getElementById("disc");
+  var handEl=document.getElementById("hand");
+  var handCountEl=document.getElementById("handCount");
+  var messageEl=document.getElementById("msg");
+  var deckEl=document.getElementById("deck");
+  var drawBtnEl=document.getElementById("drawBtn");
+  var passBtnEl=document.getElementById("passBtn");
+  var unoBtnEl=document.getElementById("unoBtn");
+  var catchBtnEl=document.getElementById("catchBtn");
+  var colorPickerEl=document.getElementById("colorPicker");
+
+  function audio(){
+    try{
+      if(!audioCtx){
+        var AC=window.AudioContext||window.webkitAudioContext;
+        audioCtx=new AC();
+      }
+      if(audioCtx.state==="suspended")audioCtx.resume();
+      return audioCtx;
+    }catch(e){return null;}
+  }
+  function tone(freq,dur,type,vol,delay){
+    var ctx=audio();if(!ctx)return;
+    var o=ctx.createOscillator(),g=ctx.createGain();
+    o.type=type||"sine";o.frequency.value=freq;
+    var now=ctx.currentTime+(delay||0);
+    g.gain.setValueAtTime(vol||.04,now);
+    g.gain.exponentialRampToValueAtTime(.001,now+dur);
+    o.connect(g);g.connect(ctx.destination);o.start(now);o.stop(now+dur);
+  }
+  function playDrawSound(){tone(220,.05,"triangle",.035,0);tone(300,.06,"triangle",.03,.045);}
+  function playCardSound(){tone(480,.05,"square",.025,0);tone(360,.08,"triangle",.03,.045);}
+  document.addEventListener("pointerdown",audio,{once:true});
+  document.addEventListener("touchstart",audio,{once:true,passive:true});
+
+  function symbol(v){
+    if(v==="reverse")return "↔";
+    if(v==="skip")return "⊘";
+    if(v==="wild")return "◉";
+    return v;
+  }
+  function safeClass(v){return String(v).replace("+","plus");}
+
+  function cardHTML(card,index,owner){
+    if(!card)return "";
+    var special=["reverse","skip","+2","+4","wild"].indexOf(card.v)>=0;
+    var cls="uno2-card "+card.c+(special?" special":"")+" v-"+safeClass(card.v);
+    var click=owner?' onclick="window.UNO_PLAY('+index+')"':"";
+    var center="";
+    if(card.v==="reverse"){
+      center='<span class="reverse-symbol"><i class="ra">➜</i><i class="rb">➜</i></span>';
+    }else if(card.v==="skip"){
+      center='<span class="skip-symbol"><i></i></span>';
+    }else if(card.v==="wild"){
+      center='<span class="wild-wheel"><i class="q1"></i><i class="q2"></i><i class="q3"></i><i class="q4"></i></span>';
+    }else if(card.v==="+4"){
+      center='<span class="plus-four"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i></span>';
+    }else if(card.v==="+2"){
+      center='<span class="plus-two"><i class="c1"></i><i class="c2"></i></span>';
+    }else{
+      center='<span class="number">'+card.v+'</span>';
+    }
+    return '<button class="'+cls+'" type="button"'+click+'>'+
+      '<b class="corner tl">'+symbol(card.v)+'</b>'+
+      '<span class="oval">'+center+'</span>'+
+      '<b class="corner br">'+symbol(card.v)+'</b>'+
+      '</button>';
+  }
+
+  function legal(card){
+    if(!state||!state.top||!card)return false;
+    return card.c==="wild"||card.c===state.top.c||card.v===state.top.v;
+  }
+  function hasPlayable(){
+    if(!state)return false;
+    for(var i=0;i<state.hand.length;i++)if(legal(state.hand[i]))return true;
+    return false;
+  }
+  function myTurn(){return state&&state.turn_player_id===ME&&state.status==="playing";}
+
+  function render(){
+    if(!state)return;
+    discardEl.innerHTML=cardHTML(state.top,0,false);
+    handEl.innerHTML=state.hand.map(function(c,i){return cardHTML(c,i,true);}).join("");
+
+    var children=handEl.children;
+    for(var i=0;i<children.length;i++){
+      if(myTurn()&&legal(state.hand[i]))children[i].classList.add("playable");
+      else children[i].classList.remove("playable");
+    }
+
+    deckCountEl.textContent=state.deck_count;
+    handCountEl.textContent=state.hand.length+" cartas";
+    turnEl.textContent=myTurn()?"TU TURNO":"TURNO DE "+state.turn_name.toUpperCase();
+
+    if(state.opponents.length){
+      opponentInfoEl.innerHTML=state.opponents.map(function(p){
+        return (p.bot&&!p.fake_user?"🤖 ":"")+p.name+" · ⭐ "+(p.stars||0)+" · "+p.cards+" cartas";
+      }).join(" · ");
+    }else{
+      opponentInfoEl.textContent="Esperando rival";
+    }
+
+    messageEl.textContent=state.message||"";
+    var drawAllowed=myTurn()&&!state.drawn_this_turn&&!hasPlayable();
+    var passAllowed=myTurn()&&state.drawn_this_turn&&!hasPlayable();
+    var unoAllowed=myTurn()&&state.hand.length===2&&hasPlayable()&&!state.said_uno;
+    var catchAllowed=!!state.catchable_id&&state.catchable_id!==ME;
+
+    drawBtnEl.disabled=!drawAllowed;
+    passBtnEl.disabled=!passAllowed;
+    unoBtnEl.disabled=!unoAllowed;
+    catchBtnEl.disabled=!catchAllowed;
+    deckEl.classList.toggle("disabled",!drawAllowed);
+
+    if(state.winner_id){
+      showOver();
+    }
+  }
+
+  function chooseColor(callback){
+    colorPickerEl.hidden=false;
+    var bs=colorPickerEl.querySelectorAll("[data-color]");
+    for(var i=0;i<bs.length;i++){
+      bs[i].onclick=function(){
+        colorPickerEl.hidden=true;
+        callback(this.getAttribute("data-color"));
+      };
+    }
+  }
+
+  function play(index){
+    if(!myTurn()||!state.hand[index]||!legal(state.hand[index]))return;
+    var c=state.hand[index];
+    if(c.v==="wild"||c.v==="+4"){
+      chooseColor(function(color){
+        socket.emit("uno_play",{code:CODE,index:index,color:color});
+      });
+    }else{
+      socket.emit("uno_play",{code:CODE,index:index});
+    }
+  }
+  window.UNO_PLAY=play;
+
+  function showOver(){
+    var over=document.getElementById("unoOver");
+    document.getElementById("unoWinner").textContent=
+      state.winner_id===ME?"¡HAS GANADO!":(state.turn_name||"Partida terminada");
+    over.classList.remove("hidden");over.style.display="grid";
+  }
+
+  deckEl.onclick=function(){if(!deckEl.classList.contains("disabled"))socket.emit("uno_draw",{code:CODE});};
+  drawBtnEl.onclick=function(){socket.emit("uno_draw",{code:CODE});};
+  passBtnEl.onclick=function(){socket.emit("uno_pass",{code:CODE});};
+  unoBtnEl.onclick=function(){socket.emit("uno_call",{code:CODE});};
+  catchBtnEl.onclick=function(){socket.emit("uno_catch",{code:CODE});};
+
+  socket.on("connect",function(){
+    socket.emit("uno_join_game",{code:CODE});
+  });
+  socket.on("uno_state",function(d){
+    state=d;render();
+  });
+  socket.on("uno_sound",function(d){
+    if(d.kind==="draw")playDrawSound();
+    if(d.kind==="play")playCardSound();
+  });
+  socket.on("uno_game_over",function(d){
+    if(state){state.winner_id=d.winner_id;state.message="🏆 "+d.winner+" ha ganado";render();}
+  });
+  socket.on("app_error",function(d){messageEl.textContent=d.message;});
+
+  // Respaldo de reconexión: pide estado periódico si el móvil perdió algún evento.
+  setInterval(function(){
+    if(socket.connected)socket.emit("uno_join_game",{code:CODE});
+  },2500);
+
+  try{
+    fetch("/api/progreso/jugada",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({game:"uno_deluxe",code:CODE})
+    }).catch(function(){});
+  }catch(e){}
+})();
+</script>
+{% endblock %}

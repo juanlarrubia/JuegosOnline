@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}La Oca Deluxe{% endblock %}
+{% block content %}
+<div class="boardgame-shell">
+<header class="boardgame-head"><div><small>CLÁSICO · TABLERO</small><h1>🪿 La Oca Deluxe</h1></div><a class="back-link" href="{{url_for('juegos')}}">← Juegos</a></header>
+<div class="boardgame-hud"><span id="turnO">TU TURNO</span><span>🎲 <b id="diceO">—</b></span><span>Tú: <b id="mePos">1</b></span><span>CPU: <b id="cpuPos">1</b></span></div>
+<div id="ocaMsg" class="board-msg">Llega exactamente a la casilla 63.</div>
+<div id="ocaBoard" class="path-board"></div>
+<button id="rollOca" class="roll-big">🎲 TIRAR DADO</button>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+var pos=1,cpu=1,turn="me",over=false;
+var geese=[5,9,14,18,23,27,32,36,41,45,50,54,59];
+var bridge=[6,12],inn=19,well=31,lab=42,prison=52,death=58;
+function icon(n){if(geese.indexOf(n)>=0)return"🪿";if(bridge.indexOf(n)>=0)return"🌉";if(n===inn)return"🏨";if(n===well)return"🕳️";if(n===lab)return"🌀";if(n===prison)return"🔒";if(n===death)return"💀";if(n===63)return"🏆";return""}
+function render(){
+ var h="";for(var n=1;n<=63;n++){var cl="path-cell"+(icon(n)?" special":"")+(n===1?" start":"")+(n===63?" finish":"");h+='<div class="'+cl+'"><b>'+n+'</b><span class="cell-icon">'+icon(n)+'</span><div class="pawns">'+(pos===n?'<span class="pawn">🔵</span>':'')+(cpu===n?'<span class="pawn">🔴</span>':'')+'</div></div>'}
+ ocaBoard.innerHTML=h;mePos.textContent=pos;cpuPos.textContent=cpu;turnO.textContent=turn==="me"?"TU TURNO":"TURNO CPU";rollOca.disabled=turn!=="me"||over;
+}
+function move(who,d){
+ var p=who==="me"?pos:cpu, np=p+d;if(np>63)np=63-(np-63);
+ var extra=false,msg="";
+ if(geese.indexOf(np)>=0&&np!==63){var idx=geese.indexOf(np),next=geese[idx+1];if(next){np=next;extra=true;msg="🪿 De oca a oca y tiro porque me toca.";}}
+ if(np===6){np=12;msg="🌉 De puente a puente.";extra=true}
+ else if(np===12){np=6;msg="🌉 Vuelves al otro puente."}
+ else if(np===58){np=1;msg="💀 Muerte: vuelves al inicio."}
+ else if(np===31){msg="🕳️ Pozo: pierdes un turno."}
+ if(who==="me")pos=np;else cpu=np;
+ ocaMsg.textContent=msg||((who==="me"?"Tú":"CPU")+" avanzas "+d+" casillas.");
+ if(np===63){over=true;ocaMsg.textContent=who==="me"?"🏆 ¡HAS GANADO!":"🤖 CPU ha ganado.";render();return}
+ turn=extra?who:(who==="me"?"cpu":"me");render();
+ if(turn==="cpu"&&!over)setTimeout(cpuTurn,700);
+}
+rollOca.onclick=function(){if(turn!=="me"||over)return;var d=1+Math.floor(Math.random()*6);diceO.textContent=d;move("me",d)};
+function cpuTurn(){var d=1+Math.floor(Math.random()*6);diceO.textContent=d;move("cpu",d)}
+render();
+})();
+</script>
+{% endblock %}

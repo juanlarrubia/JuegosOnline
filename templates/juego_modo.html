@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.name }} · Cómo jugar{% endblock %}
+{% block content %}
+<header class="topbar">
+  <div class="brand-mini"><span>{{ meta.icon }}</span><strong>{{ meta.name|upper }}</strong></div>
+  <a class="back-link" href="{{ url_for('juegos') }}">← Juegos</a>
+</header>
+
+<main class="mode-shell">
+  <span class="eyebrow">ELIGE CÓMO JUGAR</span>
+  <h1>{{ meta.icon }} {{ meta.name }}</h1>
+
+  <div class="mode-player">
+    <div><small>JUGADOR</small><strong>{{ user.username }}</strong></div>
+    <div class="mode-stars">⭐ {{ user.stars }}</div>
+  </div>
+
+  <section class="mode-grid">
+    <form class="mode-card" method="post" action="{{ url_for('juego_crear_modo', game=game) }}">
+      <span class="mode-icon">👥</span>
+      <div><h3>Con amigos</h3><p>Crea una sala e invita a uno o varios amigos.</p></div>
+      <input type="hidden" name="mode" value="friends">
+      <button type="submit">CREAR SALA</button>
+    </form>
+
+    <form class="mode-card" method="post" action="{{ url_for('juego_crear_modo', game=game) }}">
+      <span class="mode-icon">🤖</span>
+      <div><h3>Contra CPU</h3><p>Entra directamente con un rival controlado por la máquina.</p></div>
+      <input type="hidden" name="mode" value="cpu">
+      <button type="submit">JUGAR</button>
+    </form>
+
+    <form class="mode-card" method="post" action="{{ url_for('juego_crear_modo', game=game) }}">
+      <span class="mode-icon">🌐</span>
+      <div><h3>Rival aleatorio</h3><p>Busca otro jugador. Si nadie espera, aparecerá un rival virtual con nombre y estrellas.</p></div>
+      <input type="hidden" name="mode" value="random">
+      <button type="submit">BUSCAR RIVAL</button>
+    </form>
+  </section>
+
+  <section class="card panel">
+    <div class="panel-head">
+      <div><span class="eyebrow">MEDALLAS DEL JUEGO</span><h3>{{ earned|length }} / 20 conseguidas</h3></div>
+      <a class="settings-link" href="{{ url_for('medallas') }}">VER TODAS</a>
+    </div>
+    <div class="medal-preview">
+      {% for md in medals %}
+      <div class="mini-medal {% if md.key not in earned %}locked{% endif %}" title="{{ md.title }} · {{ md.description }}">
+        {% if md.key in earned %}🏅{% else %}🔒{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+{% endblock %}

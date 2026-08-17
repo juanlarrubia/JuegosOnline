@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Nuevo torneo · Juegos Online{% endblock %}
+{% block content %}
+<header class="topbar"><div class="brand-mini"><span>🏆</span><strong>NUEVO TORNEO</strong></div><a class="back-link" href="{{ url_for('menu') }}">← Menú</a></header>
+<main class="tournament-form-shell">
+ <span class="eyebrow">RETA A UN AMIGO</span>
+ <h1>Crea tu torneo</h1>
+ <p class="muted">Por defecto están seleccionados todos los juegos y hay que ganar 3 partidas en cada uno.</p>
+ <form method="post" action="{{ url_for('torneo_crear') }}">
+   <section class="card panel">
+    <label class="eyebrow">RIVAL</label>
+    <select name="opponent_id" required>
+      <option value="">Elige un amigo…</option>
+      {% for a in amigos %}<option value="{{a.id}}">{{a.username}} · ⭐ {{a.stars}}</option>{% endfor %}
+    </select>
+   </section>
+   <section class="tournament-game-list">
+    {% for slug,meta in games.items() %}
+    <label class="tournament-game-choice">
+      <input type="checkbox" name="game_{{slug}}" checked>
+      <span class="gicon">{{meta.icon}}</span>
+      <div><strong>{{meta.name}}</strong><small>Victorias para ganar este juego</small></div>
+      <input class="wins-input" name="wins_{{slug}}" type="number" min="1" max="20" value="3">
+    </label>
+    {% endfor %}
+   </section>
+   <button class="start-button" type="submit">🏆 ENVIAR INVITACIÓN DE TORNEO</button>
+ </form>
+</main>
+{% endblock %}

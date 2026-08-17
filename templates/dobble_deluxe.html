@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block content %}<div class="newgame-shell"><h1>Dobble Arena</h1><div class="scoreboard"><b>TÚ <span id="ms">0</span></b><b>CPU <span id="cs">0</span></b></div><div id="dmsg" class="game-message">Encuentra el símbolo común.</div><div class="dobble-stage"><div id="ca" class="dobble-card"></div><b>VS</b><div id="cb" class="dobble-card"></div></div></div><script>
+const sy=["🚀","🍉","🐙","⚡","🎸","🌙","🦋","🔑","🎯","🌵","👻","🍎","💎","☀️","🐢","⚽","🎲","🍓","🚗","⭐","🐬","👑","🔥","🌈"];let a=0,b=0,common,timer;
+function round(){clearTimeout(timer);common=sy[Math.floor(Math.random()*sy.length)];let r=sy.filter(x=>x!==common).sort(()=>Math.random()-.5),x=[common,...r.slice(0,7)].sort(()=>Math.random()-.5),y=[common,...r.slice(7,14)].sort(()=>Math.random()-.5);ca.innerHTML=x.map(v=>`<button onclick="pick('${v}')">${v}</button>`).join("");cb.innerHTML=y.map(v=>`<button onclick="pick('${v}')">${v}</button>`).join("");timer=setTimeout(()=>{b++;cs.textContent=b;dmsg.textContent="🤖 CPU encontró "+common;setTimeout(round,550)},1600+Math.random()*1800)}
+function pick(v){if(v===common){clearTimeout(timer);a++;ms.textContent=a;dmsg.textContent="✅ ¡Correcto!";setTimeout(round,450)}else{a=Math.max(0,a-1);ms.textContent=a;dmsg.textContent="❌ No coincide."}}round();
+</script>
+<script>
+fetch("/api/progreso/jugada",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({game:"dobble_deluxe",code:"{{ codigo }}"})
+}).then(r=>r.json()).then(d=>{
+  if(d.new_medals&&d.new_medals.length){
+    d.new_medals.forEach(m=>{
+      const e=document.createElement("div");e.className="live-toast medal-toast";
+      e.textContent=`🏅 ${m.title} · +${m.stars} ⭐`;
+      document.body.appendChild(e);setTimeout(()=>e.remove(),3500);
+    });
+  }
+}).catch(()=>{});
+</script>
+{% endblock %}

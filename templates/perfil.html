@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Mi perfil · Juegos Online{% endblock %}
+{% block content %}
+<header class="topbar">
+  <div class="brand-mini"><span>👤</span><strong>MI PERFIL</strong></div>
+  <a class="back-link" href="{{ url_for('menu') }}">← Menú principal</a>
+</header>
+<section class="center-page">
+  <div class="card auth-card profile-card">
+    <div class="profile-avatar">
+      {% if user.avatar_style == 'rayo' %}⚡
+      {% elif user.avatar_style == 'mando' %}🎮
+      {% elif user.avatar_style == 'robot' %}🤖
+      {% else %}{{ (user.display_name or user.username)[0]|upper }}
+      {% endif %}
+    </div>
+    <span class="eyebrow">JUGADOR</span>
+    <h2>{{ user.display_name or user.username }}</h2>
+    <p class="muted">@{{ user.username }}</p>
+    <div class="profile-data">
+      <div><small>Correo</small><strong>{{ user.email or 'Sin configurar' }}</strong></div>
+      <div><small>Tema</small><strong>{{ theme_options.get(user.theme, user.theme) }}</strong></div>
+    </div>
+    <a class="secondary-button" href="{{ url_for('ajustes') }}">EDITAR PERFIL Y AJUSTES</a>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Torneo #{{t.id}} · Juegos Online{% endblock %}
+{% block content %}
+<header class="topbar"><div class="brand-mini"><span>🏆</span><strong>TORNEO #{{t.id}}</strong></div><a class="back-link" href="{{ url_for('menu') }}">← Menú</a></header>
+<main class="tournament-view-shell">
+ <span class="eyebrow">TORNEO {{ t.status|upper }}</span>
+ <h1>{{t.creator_name}} <span class="stars-mini">⭐{{t.creator_stars}}</span> ⚔️ {{t.opponent_name}} <span class="stars-mini">⭐{{t.opponent_stars}}</span></h1>
+
+ {% if t.status=="pendiente" and user.id==t.opponent_id %}
+ <div class="card panel">
+   <h3>{{t.creator_name}} te ha invitado a este torneo</h3>
+   <div class="actions">
+    <form method="post" action="{{url_for('torneo_responder',tid=t.id)}}"><input type="hidden" name="action" value="aceptar"><button class="accept">✓ ACEPTAR</button></form>
+    <form method="post" action="{{url_for('torneo_responder',tid=t.id)}}"><input type="hidden" name="action" value="rechazar"><button class="reject">× RECHAZAR</button></form>
+   </div>
+ </div>
+ {% elif t.status=="pendiente" %}
+ <div class="waiting-banner">⏳ Esperando a que {{t.opponent_name}} acepte el torneo…</div>
+ {% endif %}
+
+ <section class="card panel">
+   <div class="panel-head"><div><span class="eyebrow">JUEGOS DEL TORNEO</span><h3>{{games|length}} juegos</h3></div></div>
+   {% for g in games %}
+   <div class="tourney-score">
+     <div><strong>{{meta[g.game].icon}} {{meta[g.game].name}}</strong><small>Primero en conseguir {{g.wins_needed}} victorias</small></div>
+     <div class="scorebig">{{g.creator_wins}} : {{g.opponent_wins}}</div>
+     {% if t.status=="activo" %}
+       {% if g.creator_wins < g.wins_needed and g.opponent_wins < g.wins_needed %}
+       <form method="post" action="{{url_for('torneo_jugar',tid=t.id,game=g.game)}}"><button class="add-button" type="submit">JUGAR</button></form>
+       {% else %}<strong>✅ SERIE TERMINADA</strong>{% endif %}
+     {% else %}<span></span>{% endif %}
+   </div>
+   {% endfor %}
+ </section>
+</main>
+{% endblock %}

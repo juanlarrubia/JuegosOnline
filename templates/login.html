@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Entrar · Juegos Online{% endblock %}
+
+{% block content %}
+<section class="login-layout">
+    <div class="brand-panel">
+        <div class="logo">🎮</div>
+        <h1>JUEGOS<br><span>ONLINE</span></h1>
+        <p>Tu sala de juegos con amigos.</p>
+        <div class="mini-icons">
+            <span>👥 Amigos</span>
+            <span>🌐 Online</span>
+            <span>🏆 Partidas</span>
+        </div>
+    </div>
+
+    <div class="card login-card">
+        <div class="card-title">
+            <span class="eyebrow">BIENVENIDO</span>
+            <h2>Iniciar sesión</h2>
+            <p>Entra con tu nombre de jugador.</p>
+        </div>
+
+        <form method="post" action="{{ url_for('login') }}">
+            <label>Nombre de usuario</label>
+            <input name="username" autocomplete="username" required placeholder="Ej. JuanCordoba">
+
+            <label>Contraseña</label>
+            <input name="password" type="password" autocomplete="current-password" required placeholder="••••••••">
+
+            <button class="primary" type="submit">ENTRAR</button>
+        </form>
+
+        <div class="separator"><span>o</span></div>
+        <a class="secondary-button" href="{{ url_for('registro') }}">CREAR CUENTA</a>
+    </div>
+</section>
+{% endblock %}

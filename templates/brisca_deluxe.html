@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}La Brisca{% endblock %}
+{% block content %}
+<div class="boardgame-shell">
+<header class="boardgame-head"><div><small>BARAJA ESPAÑOLA</small><h1>🃏 La Brisca</h1></div><a class="back-link" href="{{url_for('juegos')}}">← Juegos</a></header>
+<div class="boardgame-hud"><span id="brTurn">TU TURNO</span><span>Tú: <b id="brMe">0</b> pts</span><span>CPU: <b id="brCpu">0</b> pts</span><span>Triunfo: <b id="brTrump"></b></span></div>
+<div class="brisca-table"><div id="brMsg" class="board-msg">Gana bazas y suma puntos.</div><div id="brCenter" class="brisca-center"></div><div id="brHand" class="brisca-hand"></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+var suits=["oros","copas","espadas","bastos"],icons={oros:"🟡",copas:"🏆",espadas:"⚔️",bastos:"🌿"},nums=[1,2,3,4,5,6,7,10,11,12];
+var pts={1:11,3:10,12:4,11:3,10:2,2:0,4:0,5:0,6:0,7:0},deck=[],me=[],cpu=[],trick=[],mePts=0,cpuPts=0,turn="me",over=false,trump;
+for(var s=0;s<suits.length;s++)for(var n=0;n<nums.length;n++)deck.push({s:suits[s],n:nums[n]});
+deck.sort(()=>Math.random()-.5);trump=deck[0].s;for(var i=0;i<3;i++){me.push(deck.pop());cpu.push(deck.pop())}
+function card(c,i,click){return '<button class="brisca-card '+(click?'playable':'')+'" '+(click?'onclick="window.BRPLAY('+i+')"':'')+'><span class="suit">'+icons[c.s]+'</span><strong>'+c.n+'</strong><small>'+c.s+'</small></button>'}
+function strength(c,lead){var order={1:100,3:90,12:80,11:70,10:60,7:50,6:40,5:30,4:20,2:10};return (c.s===trump?1000:c.s===lead?500:0)+order[c.n]}
+function render(){brTrump.textContent=icons[trump]+" "+trump;brMe.textContent=mePts;brCpu.textContent=cpuPts;brTurn.textContent=turn==="me"?"TU TURNO":"TURNO CPU";brHand.innerHTML=me.map((c,i)=>card(c,i,turn==="me"&&!over)).join("");brCenter.innerHTML=trick.map(x=>card(x.c,0,false)).join("")}
+function resolve(){if(trick.length<2)return;var lead=trick[0].c.s,w= strength(trick[0].c,lead)>=strength(trick[1].c,lead)?trick[0]:trick[1],score=pts[trick[0].c.n]+pts[trick[1].c.n];if(w.who==="me")mePts+=score;else cpuPts+=score;brMsg.textContent=(w.who==="me"?"✅ Tú":"🤖 CPU")+" gana la baza · +"+score+" puntos";turn=w.who;setTimeout(()=>{trick=[];if(deck.length){me.push(deck.pop());cpu.push(deck.pop())}if(!me.length&&!cpu.length&&!deck.length){over=true;brMsg.textContent=mePts>cpuPts?"🏆 ¡HAS GANADO!":cpuPts>mePts?"🤖 CPU gana.":"🤝 Empate";render();return}render();if(turn==="cpu")setTimeout(cpuPlay,600)},800)}
+window.BRPLAY=function(i){if(turn!=="me"||over)return;trick.push({who:"me",c:me.splice(i,1)[0]});turn="cpu";render();setTimeout(cpuPlay,500)}
+function cpuPlay(){if(over||turn!=="cpu")return;var i=Math.floor(Math.random()*cpu.length);trick.push({who:"cpu",c:cpu.splice(i,1)[0]});render();if(trick.length===2)resolve();else{turn="me";render()}}
+render();
+})();
+</script>
+{% endblock %}

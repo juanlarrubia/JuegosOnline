@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Reto Relámpago{% endblock %}
+{% block content %}
+<div class="match-shell">
+  <header class="match-top">
+    <div><span class="eyebrow">RETO RELÁMPAGO</span><strong id="roundLabel">Preparando...</strong></div>
+    <div class="match-code">SALA {{ codigo }}</div>
+  </header>
+
+  <div class="score-strip" id="scoreboard"></div>
+
+  <section class="quiz-stage">
+    <div class="timer-wrap"><div id="timerBar" class="timer-bar"></div></div>
+    <div id="questionEmoji" class="question-emoji">⚡</div>
+    <h1 id="questionText">¡Prepárate!</h1>
+    <div id="answers" class="answer-grid"></div>
+    <div id="feedback" class="feedback"></div>
+  </section>
+</div>
+
+<div id="gameOver" class="gameover hidden">
+  <div class="gameover-card">
+    <div class="trophy">🏆</div>
+    <span class="eyebrow">CLASIFICACIÓN FINAL</span>
+    <h1 id="winnerText">Partida terminada</h1>
+    <div id="finalRanking"></div>
+    <div class="reto-end-actions">
+      <a href="{{ url_for('juegos') }}" class="start-button replay">⚡ JUGAR OTRA</a>
+      <a href="{{ url_for('menu') }}" class="start-button reto-menu">🏠 MENÚ PRINCIPAL</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const socket=io(), CODE="{{ codigo }}";
+let answered=false, timerInterval=null, remain=10, selectedAnswer=null;
+socket.on("connect",()=>socket.emit("join_match",{code:CODE}));
+socket.on("new_question",showQuestion);
+socket.on("scoreboard",renderScores);
+socket.on("answer_result",showResult);
+socket.on("game_over",showGameOver);
+socket.on("cpu_answered",d=>{
+  const f=document.getElementById("feedback");
+  if(!answered) f.textContent="🤖 La CPU ya ha respondido…";
+});
+socket.on("round_complete",d=>{
+  clearInterval(timerInterval);
+  document.getElementById("feedback").textContent="⚡ Siguiente pregunta…";
+});
+socket.on("already_answered",()=>{
+  answered=true;
+  document.querySelectorAll(".answer-btn").forEach(b=>b.disabled=true);
+  document.getElementById("feedback").textContent="✅ Respuesta enviada · esperando al resto";
+});
+socket.on("round_timeout",()=>{
+  clearInterval(timerInterval);
+  if(!answered){
+    answered=true;
+    document.querySelectorAll(".answer-btn").forEach(b=>b.disabled=true);
+    document.getElementById("feedback").textContent="⏱️ Tiempo agotado";
+  }
+});
+
+
+let audioCtx=null;
+function getAudioCtx(){
+  try{
+    if(!audioCtx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      audioCtx=new AC();
+    }
+    if(audioCtx.state==="suspended") audioCtx.resume();
+    return audioCtx;
+  }catch(e){return null}
+}
+function tone(freq,dur=.12,type="sine",vol=.06,delay=0){
+  const ctx=getAudioCtx(); if(!ctx)return;
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type=type;o.frequency.value=freq;
+  const now=ctx.currentTime+delay;
+  g.gain.setValueAtTime(vol,now);
+  g.gain.exponentialRampToValueAtTime(.001,now+dur);
+  o.connect(g);g.connect(ctx.destination);
+  o.start(now);o.stop(now+dur);
+}
+function playQuestionSound(){
+  tone(420,.07,"triangle",.045,0);
+  tone(620,.08,"triangle",.045,.08);
+  tone(820,.10,"triangle",.045,.16);
+}
+function playCorrectSound(){
+  tone(523,.10,"sine",.055,0);
+  tone(659,.11,"sine",.055,.09);
+  tone(784,.16,"sine",.06,.18);
+}
+function playWrongSound(){
+  tone(220,.13,"sawtooth",.055,0);
+  tone(150,.18,"sawtooth",.05,.11);
+}
+
+/* En móvil el primer toque desbloquea el audio del navegador/WebView. */
+document.addEventListener("pointerdown",()=>getAudioCtx(),{once:true});
+document.addEventListener("touchstart",()=>getAudioCtx(),{once:true,passive:true});
+
+function showQuestion(d){
+  answered=false; selectedAnswer=null;
+  remain=(typeof d.remaining==="number")?d.remaining:(d.seconds||10);
+  if(!d.resume) playQuestionSound();
+  document.getElementById("roundLabel").textContent=`RONDA ${d.round} / ${d.total}`;
+  document.getElementById("questionEmoji").textContent=d.emoji;
+  document.getElementById("questionText").textContent=d.q;
+  document.getElementById("feedback").textContent="";
+  const letters=["A","B","C","D"];
+  document.getElementById("answers").innerHTML=d.a.map((a,i)=>`
+    <button class="answer-btn" data-i="${i}" onclick="answer(${i})">
+      <span>${letters[i]}</span><strong>${a}</strong>
+    </button>`).join("");
+  clearInterval(timerInterval);
+  const total=d.seconds||10;
+  const bar=document.getElementById("timerBar");
+  bar.style.width=Math.max(0,(remain/total)*100)+"%";
+  timerInterval=setInterval(()=>{
+    remain-=.1;
+    bar.style.width=Math.max(0,(remain/total)*100)+"%";
+    if(remain<=0)clearInterval(timerInterval);
+  },100);
+}
+function answer(i){
+  if(answered)return; answered=true; selectedAnswer=i; clearInterval(timerInterval);
+  document.querySelectorAll(".answer-btn").forEach(b=>b.disabled=true);
+  socket.emit("submit_answer",{code:CODE,choice:i});
+}
+function showResult(d){
+  document.querySelectorAll(".answer-btn").forEach(b=>{
+    const idx=Number(b.dataset.i);
+    if(idx===d.correct_index){
+      b.classList.add("correct");
+    }
+    if(!d.correct && idx===selectedAnswer){
+      b.classList.add("wrong");
+    }
+  });
+
+  const f=document.getElementById("feedback");
+  if(d.correct){
+    playCorrectSound();
+    f.textContent="⚡ ¡ACIERTO! Racha y velocidad suman puntos";
+    f.className="feedback good";
+  }else{
+    playWrongSound();
+    f.textContent="💥 Fallo. La respuesta correcta está marcada en verde";
+    f.className="feedback bad";
+  }
+}
+function renderScores(d){
+  const sorted=[...d.players].sort((a,b)=>b.score-a.score).slice(0,8);
+  document.getElementById("scoreboard").innerHTML=sorted.map((p,i)=>`
+    <div class="score-chip ${i===0?'leader':''}">
+      <span>${i===0?'👑':p.bot&&!p.fake_user?'🤖':p.name[0].toUpperCase()}</span>
+      <div><strong>${p.name} <span class="stars-mini">⭐ ${p.stars||0}</span></strong><small>${p.score.toLocaleString()} pts · 🔥${p.streak}</small></div>
+    </div>`).join("");
+}
+function showGameOver(d){
+  clearInterval(timerInterval);
+  const g=document.getElementById("gameOver");g.classList.remove("hidden");
+  document.getElementById("winnerText").textContent=`${d.players[0].name} gana la partida`;
+  document.getElementById("finalRanking").innerHTML=d.players.map((p,i)=>`
+    <div class="rank-row"><b>#${i+1}</b><span>${p.bot&&!p.fake_user?'🤖':'⚡'} ${p.name} · ⭐ ${p.stars||0}</span><strong>${p.score.toLocaleString()} pts</strong></div>`).join("");
+}
+</script>
+
+<script>
+fetch("/api/progreso/jugada",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({game:"reto_relampago",code:"{{ codigo }}"})
+}).then(r=>r.json()).then(d=>{
+  if(d.new_medals&&d.new_medals.length){
+    d.new_medals.forEach(m=>{
+      const e=document.createElement("div");e.className="live-toast medal-toast";
+      e.textContent=`🏅 ${m.title} · +${m.stars} ⭐`;
+      document.body.appendChild(e);setTimeout(()=>e.remove(),3500);
+    });
+  }
+}).catch(()=>{});
+</script>
+{% endblock %}

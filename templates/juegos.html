@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Juegos · Juegos Online{% endblock %}
+
+{% block content %}
+<header class="topbar library-topbar">
+  <div class="brand-mini">
+    <span>🎮</span>
+    <strong>JUEGOS ONLINE</strong>
+  </div>
+  <div class="top-actions">
+    <a href="{{ url_for('ajustes') }}" class="settings-link">⚙ Ajustes</a>
+    <a class="back-link" href="{{ url_for('menu') }}">← Menú</a>
+  </div>
+</header>
+
+<section class="library-hero">
+  <span class="eyebrow">BIBLIOTECA</span>
+  <h1>Elige tu juego</h1>
+  <p>Crea una sala, invita a tus amigos o juega contra la CPU.</p>
+</section>
+
+<section class="library-grid">
+
+  <article class="library-card bingo-library">
+    <div class="library-cover">
+      <span class="library-icon">🎱</span>
+      <span class="library-badge">DELUXE</span>
+    </div>
+    <div class="library-info">
+      <small>90 BOLAS · ESPAÑOL</small>
+      <h3>Bingo 90</h3>
+      <p>Bolas, voz, cartones y premios.</p>
+      <div class="library-tags">
+        <span>🔊 Voz</span><span>🏆 Premios</span>
+      </div>
+      <a class="library-play library-play-link" href="/juego/bingo90/modo">JUGAR</a>
+    </div>
+  </article>
+
+  <article class="library-card lightning-library">
+    <div class="library-cover">
+      <span class="library-icon">⚡</span>
+    </div>
+    <div class="library-info">
+      <small>PREGUNTAS · VELOCIDAD</small>
+      <h3>Reto Relámpago</h3>
+      <p>Responde rápido y suma rachas.</p>
+      <div class="library-tags">
+        <span>🤖 CPU</span><span>👥 Online</span>
+      </div>
+      <a class="library-play library-play-link" href="/juego/reto_relampago/modo">JUGAR</a>
+    </div>
+  </article>
+
+  <article class="library-card parchis-library">
+    <div class="library-cover">
+      <span class="library-icon">🎲</span>
+      <span class="library-badge">2 DADOS</span>
+    </div>
+    <div class="library-info">
+      <small>2–4 · ESTRATEGIA</small>
+      <h3>Parchís Deluxe</h3>
+      <p>Barreras, capturas, dobles y meta.</p>
+      <div class="library-tags">
+        <span>🤖 CPU</span><span>👥 Online</span>
+      </div>
+      <a class="library-play library-play-link" href="/juego/parchis_deluxe/modo">JUGAR</a>
+    </div>
+  </article>
+
+  <article class="library-card uno-library">
+    <div class="library-cover">
+      <span class="library-icon">🃏</span>
+      <span class="library-badge">NUEVO</span>
+    </div>
+    <div class="library-info">
+      <small>HASTA 8 · CARTAS</small>
+      <h3>UNO Deluxe</h3>
+      <p>Color, números y cartas especiales.</p>
+      <div class="library-tags">
+        <span>🤖 CPU</span><span>👥 Online</span>
+      </div>
+      <a class="library-play library-play-link" href="/juego/uno_deluxe/modo">JUGAR</a>
+    </div>
+  </article>
+
+  <article class="library-card domino-library">
+    <div class="library-cover">
+      <span class="library-icon">🁫</span>
+    </div>
+    <div class="library-info">
+      <small>2–4 · CLÁSICO</small>
+      <h3>Dominó Deluxe</h3>
+      <p>Coloca, roba y cierra la partida.</p>
+      <div class="library-tags">
+        <span>🤖 CPU</span><span>👥 Online</span>
+      </div>
+      <a class="library-play library-play-link" href="/juego/domino_deluxe/modo">JUGAR</a>
+    </div>
+  </article>
+
+  <article class="library-card dobble-library">
+    <div class="library-cover">
+      <span class="library-icon">🔎</span>
+    </div>
+    <div class="library-info">
+      <small>REFLEJOS · SÍMBOLOS</small>
+      <h3>Dobble Arena</h3>
+      <p>Encuentra el símbolo común.</p>
+      <div class="library-tags">
+        <span>🤖 CPU</span><span>⚡ Rápido</span>
+      </div>
+      <a class="library-play library-play-link" href="/juego/dobble_deluxe/modo">JUGAR</a>
+    </div>
+  </article>
+
+  <article class="library-card tute-library">
+    <div class="library-cover">
+      <span class="library-icon">🪙</span>
+    </div>
+    <div class="library-info">
+      <small>BARAJA ESPAÑOLA</small>
+      <h3>Tute Subastado</h3>
+      <p>Subasta, triunfo y bazas.</p>
+      <div class="library-tags">
+        <span>🤖 CPU</span><span>🃏 Cartas</span>
+      </div>
+      <a class="library-play library-play-link" href="/juego/subastado_deluxe/modo">JUGAR</a>
+    </div>
+  </article>
+
+  <article class="library-card naval-library">
+    <div class="library-cover">
+      <span class="library-icon">🚢</span>
+    </div>
+    <div class="library-info">
+      <small>ESTRATEGIA · FLOTA</small>
+      <h3>Batalla Naval</h3>
+      <p>Coloca tus barcos y hunde al rival.</p>
+      <div class="library-tags">
+        <span>🤖 CPU</span><span>💥 Sonido</span>
+      </div>
+      <a class="library-play library-play-link" href="/juego/barquitos_deluxe/modo">JUGAR</a>
+    </div>
+  </article>
+
+  <article class="library-card">
+    <div class="library-cover"><span class="library-icon">🪿</span><span class="library-badge">NUEVO</span></div>
+    <div class="library-info"><small>1–4 · CLÁSICO</small><h3>La Oca Deluxe</h3><p>Dados, ocas, puentes y casillas especiales.</p><div class="library-tags"><span>🤖 CPU</span><span>🎲 Tablero</span></div><a class="library-play library-play-link" href="/juego/oca_deluxe/modo">JUGAR</a></div>
+  </article>
+
+  <article class="library-card">
+    <div class="library-cover"><span class="library-icon">🐍</span><span class="library-badge">NUEVO</span></div>
+    <div class="library-info"><small>1–4 · CARRERA</small><h3>Serpientes y Escaleras</h3><p>Sube rápido y evita las serpientes.</p><div class="library-tags"><span>🪜 Escaleras</span><span>🐍 Serpientes</span></div><a class="library-play library-play-link" href="/juego/serpientes_deluxe/modo">JUGAR</a></div>
+  </article>
+
+  <article class="library-card">
+    <div class="library-cover"><span class="library-icon">🃏</span><span class="library-badge">NUEVO</span></div>
+    <div class="library-info"><small>BARAJA ESPAÑOLA</small><h3>La Brisca</h3><p>Triunfos, bazas y 120 puntos.</p><div class="library-tags"><span>🤖 CPU</span><span>🏆 Bazas</span></div><a class="library-play library-play-link" href="/juego/brisca_deluxe/modo">JUGAR</a></div>
+  </article>
+
+  <article class="library-card">
+    <div class="library-cover"><span class="library-icon">🔴</span><span class="library-badge">NUEVO</span></div>
+    <div class="library-info"><small>2 · ESTRATEGIA</small><h3>Conecta 4</h3><p>Consigue cuatro fichas en línea.</p><div class="library-tags"><span>🤖 CPU</span><span>🧠 Estrategia</span></div><a class="library-play library-play-link" href="/juego/conecta4_deluxe/modo">JUGAR</a></div>
+  </article>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const socket = io();
+
+function esc(v){
+  return String(v).replace(/[&<>"']/g,c=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  }[c]));
+}
+
+socket.on("room_invitation", d => {
+  document.querySelectorAll(".invite-popup").forEach(e=>e.remove());
+
+  const box=document.createElement("div");
+  box.className="invite-popup";
+  box.innerHTML=`
+    <strong>🎮 ${esc(d.from_name)} te invita</strong>
+    <small>${esc(d.game)} · Sala ${esc(d.code)}</small>
+    <div>
+      <button class="accept-popup">ACEPTAR</button>
+      <button class="close-popup">AHORA NO</button>
+    </div>`;
+
+  document.body.appendChild(box);
+
+  box.querySelector(".accept-popup").onclick=()=>{
+    socket.emit("accept_room_invitation",{code:d.code});
+  };
+  box.querySelector(".close-popup").onclick=()=>box.remove();
+});
+
+socket.on("go_to_room", d => {
+  if(d.game==="bingo90"){
+    location.href="/sala_bingo/"+d.code;
+  }else if(d.game==="parchis_deluxe"){
+    location.href="/parchis/sala/"+d.code;
+  }else if([
+    "uno_deluxe",
+    "domino_deluxe",
+    "dobble_deluxe",
+    "subastado_deluxe",
+    "barquitos_deluxe",
+    "oca_deluxe",
+    "serpientes_deluxe",
+    "brisca_deluxe",
+    "conecta4_deluxe"
+  ].includes(d.game)){
+    location.href="/sala_"+d.game+"/"+d.code;
+  }else{
+    location.href="/sala/"+d.code;
+  }
+});
+</script>
+{% endblock %}

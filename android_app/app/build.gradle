@@ -1,0 +1,16 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.juegosonline.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.juegosonline.app'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.1-beta'
+    }
+}

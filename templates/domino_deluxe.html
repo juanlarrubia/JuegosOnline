@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% block content %}<div class="newgame-shell"><h1>Dominó Deluxe</h1><div class="game-hud"><b id="dt">TU TURNO</b><span>Fichas por robar: <b id="sn"></b></span><span>CPU: <b id="cpun"></b></span></div><div id="chain" class="domino-table domino-chain"></div><div id="dm" class="game-message">Las fichas iluminadas se pueden jugar.</div><div id="dh" class="domino-hand"></div><div class="game-controls"><button class="game-play" onclick="drawD()">ROBAR</button><button class="game-play secondary" onclick="passD()">PASAR</button></div></div><script>
+let resultReported=false;
+function reportGameResult(won){
+ if(resultReported)return;resultReported=true;
+ fetch("/api/progreso/resultado",{method:"POST",headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({game:"domino_deluxe",code:"{{codigo}}",won:won,vs_cpu:true})}).catch(()=>{});
+}
+let all=[],h=[],cpu=[],stock=[],ch=[],turnD="me";for(let a=0;a<=6;a++)for(let b=a;b<=6;b++)all.push([a,b]);all.sort(()=>Math.random()-.5);h=all.splice(0,7);cpu=all.splice(0,7);stock=all;ch=[stock.pop()];
+const dots=n=>["","●","● ●","● ● ●","● ●<br>● ●","● ●<br>● ● ●","● ● ●<br>● ● ●"][n];function tile(t,i,small=false){return `<button class="domino-piece pretty ${small?"small":""}" ${small?"":`onclick="playD(${i})"`}><b>${dots(t[0])}</b><i></i><b>${dots(t[1])}</b></button>`}function can(t){return t.includes(ch[0][0])||t.includes(ch.at(-1)[1])}
+function place(t){let l=ch[0][0],r=ch.at(-1)[1];if(t[0]===r)ch.push(t);else if(t[1]===r)ch.push([t[1],t[0]]);else if(t[1]===l)ch.unshift(t);else if(t[0]===l)ch.unshift([t[1],t[0]]);else return false;return true}
+function rd(){chain.innerHTML=ch.map(t=>tile(t,0,true)).join("");dh.innerHTML=h.map((t,i)=>tile(t,i)).join("");[...dh.children].forEach((e,i)=>e.classList.toggle("playable",turnD==="me"&&can(h[i])));sn.textContent=stock.length;cpun.textContent=cpu.length;dt.textContent=turnD==="me"?"TU TURNO":"TURNO CPU"}
+function playD(i){if(turnD!=="me"||!can(h[i]))return;place(h.splice(i,1)[0]);if(!h.length){dm.textContent="🏆 ¡HAS GANADO!";reportGameResult(true);return rd()}turnD="cpu";rd();setTimeout(cpuD,650)}function drawD(){if(turnD==="me"&&stock.length){h.push(stock.pop());rd()}}function passD(){if(turnD!=="me")return;turnD="cpu";rd();setTimeout(cpuD,600)}
+function cpuD(){let i=cpu.findIndex(can);while(i<0&&stock.length){cpu.push(stock.pop());i=cpu.findIndex(can)}if(i>=0)place(cpu.splice(i,1)[0]);if(!cpu.length){dm.textContent="🤖 CPU gana.";reportGameResult(false);return rd()}turnD="me";rd()}rd();
+</script>
+<script>
+fetch("/api/progreso/jugada",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({game:"domino_deluxe",code:"{{ codigo }}"})
+}).then(r=>r.json()).then(d=>{
+  if(d.new_medals&&d.new_medals.length){
+    d.new_medals.forEach(m=>{
+      const e=document.createElement("div");e.className="live-toast medal-toast";
+      e.textContent=`🏅 ${m.title} · +${m.stars} ⭐`;
+      document.body.appendChild(e);setTimeout(()=>e.remove(),3500);
+    });
+  }
+}).catch(()=>{});
+</script>
+{% endblock %}

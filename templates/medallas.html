@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Medallas · Juegos Online{% endblock %}
+{% block content %}
+<header class="topbar">
+ <div class="brand-mini"><span>🏅</span><strong>MIS MEDALLAS</strong></div>
+ <div class="user-chip"><strong>{{ user.username }} · ⭐ {{ user.stars }}</strong><a class="back-link" href="{{ url_for('menu') }}">← Menú</a></div>
+</header>
+<main class="medals-shell">
+ <span class="eyebrow">PROGRESIÓN GLOBAL</span>
+ <h1>⭐ {{ user.stars }} estrellas</h1>
+ <p class="muted">Cada medalla conseguida añade estrellas permanentemente a tu jugador.</p>
+ {% for g in games %}
+ <section class="medal-game">
+   <div class="medal-game-head">
+     <div><span class="eyebrow">{{ g.meta.icon }} {{ g.meta.name }}</span><h3>{{ g.earned|length }} / 20 medallas</h3></div>
+     <strong>🎮 {{ g.stats.plays }} · 🏆 {{ g.stats.wins }}</strong>
+   </div>
+   <div class="medal-grid">
+   {% for md in g.medals %}
+     <div class="medal-card {% if md.key not in g.earned %}locked{% endif %}">
+       <span>{% if md.key in g.earned %}🏅{% else %}🔒{% endif %}</span>
+       <strong>{{ md.number }}. {{ md.title }}</strong>
+       <small>{{ md.description }}</small>
+       <em>+{{ md.stars }} ⭐</em>
+     </div>
+   {% endfor %}
+   </div>
+ </section>
+ {% endfor %}
+</main>
+{% endblock %}
