@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}Menú principal · Juegos Online{% endblock %}
+
+{% block content %}
+<header class="topbar">
+    <div class="brand-mini"><span>🎮</span><strong>JUEGOS ONLINE</strong></div>
+    <div class="user-chip">
+        <span class="avatar">{{ user.username[0]|upper }}</span>
+        <div><small>Conectado como</small><strong>{{ user.username }} <span class="stars-inline">⭐ {{ user.stars }}</span></strong></div>
+        <a href="{{ url_for('ajustes') }}" title="Ajustes">⚙</a><a href="{{ url_for('logout') }}" title="Cerrar sesión">⎋</a>
+    </div>
+</header>
+
+<section class="hero">
+    <span class="eyebrow">MENÚ PRINCIPAL</span>
+    <h1>¿A qué jugamos hoy?</h1>
+    <p>Elige un juego, invita a tus amigos y entra en la partida.</p>
+</section>
+
+
+<section class="quick-join card">
+  <div><span class="eyebrow">¿TE HAN INVITADO?</span><strong>Entrar con código de sala</strong></div>
+  <form method="post" action="{{ url_for('unirse_codigo') }}">
+    <input name="codigo" maxlength="6" placeholder="ABC123" required>
+    <button type="submit">ENTRAR</button>
+  </form>
+</section>
+
+<section class="dashboard-grid">
+    <a class="menu-card play" href="{{ url_for('juegos') }}">
+        <div class="big-icon">▶</div>
+        <div>
+            <small>JUGAR</small>
+            <h3>Ver juegos</h3>
+            <p>Explora los juegos disponibles.</p>
+        </div>
+        <span class="arrow">→</span>
+    </a>
+
+    <a class="menu-card tournament" href="{{ url_for('torneo_nuevo') }}">
+        <div class="big-icon">🏆</div>
+        <div>
+            <small>TORNEOS</small>
+            <h3>Crear torneo</h3>
+            <p>Reta a un amigo en varios juegos.</p>
+        </div>
+        <span class="arrow">→</span>
+    </a>
+
+    <a class="menu-card medals" href="{{ url_for('medallas') }}">
+        <div class="big-icon">🏅</div>
+        <div>
+            <small>PROGRESIÓN</small>
+            <h3>{{ user.stars }} estrellas</h3>
+            <p>Consulta tus medallas y retos.</p>
+        </div>
+        <span class="arrow">→</span>
+    </a>
+
+    <div class="menu-card friends">
+        <div class="big-icon">👥</div>
+        <div>
+            <small>AMIGOS</small>
+            <h3>{{ amigos|length }} amigo{% if amigos|length != 1 %}s{% endif %}</h3>
+            <p>Añade jugadores por su nombre.</p>
+        </div>
+    </div>
+</section>
+
+<section class="content-grid">
+    <div class="card panel">
+        <div class="panel-head">
+            <div>
+                <span class="eyebrow">BUSCAR JUGADORES</span>
+                <h3>Añadir amigo</h3>
+            </div>
+            <span class="status-dot"></span>
+        </div>
+
+        <div class="search-box">
+            <input id="buscarUsuario" placeholder="Escribe un nombre de usuario..." autocomplete="off">
+            <span>⌕</span>
+        </div>
+        <div id="resultados" class="results">
+            <div class="empty">Empieza a escribir para buscar jugadores.</div>
+        </div>
+    </div>
+
+    <div class="card panel">
+        <div class="panel-head">
+            <div>
+                <span class="eyebrow">TU GRUPO</span>
+                <h3>Amigos</h3>
+            </div>
+        </div>
+
+        <div class="friend-list">
+            {% if amigos %}
+                {% for amigo in amigos %}
+                    <div class="friend-row">
+                        <span class="avatar">{{ amigo.username[0]|upper }}</span>
+                        <div><strong>{{ amigo.username }} <span class="stars-mini">⭐ {{ amigo.stars }}</span></strong><small>Amigo</small></div>
+                        <button class="icon-button invite-btn" data-friend-id="{{ amigo.id }}" data-friend-name="{{ amigo.username }}" title="Invitar a jugar">🎮</button><span class="friend-status offline" data-user-id="{{ amigo.id }}">● OFFLINE</span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty">Todavía no tienes amigos añadidos.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card panel">
+        <div class="panel-head">
+            <div>
+                <span class="eyebrow">PENDIENTES</span>
+                <h3>Solicitudes</h3>
+            </div>
+            {% if solicitudes %}<span class="badge">{{ solicitudes|length }}</span>{% endif %}
+        </div>
+
+        {% if solicitudes %}
+            {% for s in solicitudes %}
+                <div class="friend-row">
+                    <span class="avatar alt">{{ s.username[0]|upper }}</span>
+                    <strong>{{ s.username }}</strong>
+                    <div class="actions">
+                        <form method="post" action="{{ url_for('aceptar_amigo', sid=s.solicitud_id) }}">
+                            <button class="accept" title="Aceptar">✓</button>
+                        </form>
+                        <form method="post" action="{{ url_for('rechazar_amigo', sid=s.solicitud_id) }}">
+                            <button class="reject" title="Rechazar">×</button>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <div class="empty">No tienes solicitudes nuevas.</div>
+            {% endfor %}
+        {% endif %}
+
+        {% if enviadas %}
+            <div class="sent-title">Enviadas</div>
+            {% for e in enviadas %}
+                <div class="friend-row soft">
+                    <span class="avatar">{{ e.username[0]|upper }}</span>
+                    <div><strong>{{ e.username }}</strong><small>Esperando respuesta</small></div>
+                    <span class="clock">⌛</span>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+
+    <div class="card panel tournament-panel">
+        <div class="panel-head"><div><span class="eyebrow">TORNEOS</span><h3>Retos y torneos activos</h3></div></div>
+        {% if torneos_pendientes %}
+          {% for t in torneos_pendientes %}
+          <div class="tournament-row">
+            <div><strong>🏆 {{ t.from_name }} te reta</strong><small>Torneo pendiente de aceptar</small></div>
+            <a class="add-button" href="{{ url_for('torneo_ver', tid=t.id) }}">VER</a>
+          </div>
+          {% endfor %}
+        {% endif %}
+        {% if torneos_activos %}
+          {% for t in torneos_activos %}
+          <div class="tournament-row">
+            <div><strong>⚔️ vs {{ t.rival }}</strong><small>Torneo activo</small></div>
+            <a class="add-button" href="{{ url_for('torneo_ver', tid=t.id) }}">ABRIR</a>
+          </div>
+          {% endfor %}
+        {% endif %}
+        {% if not torneos_pendientes and not torneos_activos %}
+          <div class="empty">No tienes torneos pendientes ni activos.</div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const input = document.getElementById("buscarUsuario");
+const resultados = document.getElementById("resultados");
+const socket = io();
+let timer;
+
+input.addEventListener("input", () => {
+  clearTimeout(timer);
+  const q = input.value.trim();
+
+  if (!q) {
+    resultados.innerHTML = '<div class="empty">Empieza a escribir para buscar jugadores.</div>';
+    return;
+  }
+
+  timer = setTimeout(async () => {
+    const r = await fetch(`/buscar_usuario?q=${encodeURIComponent(q)}`);
+    const usuarios = await r.json();
+
+    resultados.innerHTML = usuarios.length ? usuarios.map(u => `
+      <div class="friend-row">
+        <span class="avatar alt">${u.username.charAt(0).toUpperCase()}</span>
+        <strong>${escapeHtml(u.username)} <span class="stars-mini">⭐ ${u.stars||0}</span></strong>
+        <form method="post" action="/anadir_amigo/${u.id}">
+          <button class="add-button" type="submit">+ Añadir</button>
+        </form>
+      </div>`).join("") : '<div class="empty">No se han encontrado jugadores.</div>';
+  }, 250);
+});
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+  }[c]));
+}
+
+function showToast(msg) {
+  const t = document.createElement("div");
+  t.className = "live-toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2800);
+}
+
+function setPresence(userId, online) {
+  const el = document.querySelector(`[data-user-id="${userId}"]`);
+  if (!el) return;
+
+  el.className = `friend-status ${online ? "online" : "offline"}`;
+  el.textContent = online ? "● ONLINE" : "● OFFLINE";
+
+  const btn = el.parentElement.querySelector(".invite-btn");
+  if (btn) btn.disabled = !online;
+}
+
+async function refreshPresence() {
+  try {
+    const states = await (await fetch("/estado_amigos")).json();
+    Object.entries(states).forEach(([id, online]) => setPresence(id, online));
+  } catch (e) {}
+}
+
+refreshPresence();
+setInterval(refreshPresence, 3000);
+socket.on("presence_changed", d => setPresence(d.user_id, d.online));
+
+/*
+ * En el menú no hay una sala activa desde la que invitar.
+ * El botón de mando abre la biblioteca para crear primero una sala.
+ */
+document.querySelectorAll(".invite-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    location.href = "{{ url_for('juegos') }}";
+  });
+});
+
+/* Invitaciones recibidas desde cualquier sala */
+socket.on("room_invitation", d => {
+  document.querySelectorAll(".invite-popup").forEach(e => e.remove());
+
+  const box = document.createElement("div");
+  box.className = "invite-popup";
+  box.innerHTML = `
+    <strong>🎮 ${escapeHtml(d.from_name)} te invita a jugar</strong>
+    <small>${escapeHtml(d.game)} · Sala ${escapeHtml(d.code)}</small>
+    <div>
+      <button class="accept-popup">ACEPTAR</button>
+      <button class="close-popup">AHORA NO</button>
+    </div>`;
+
+  document.body.appendChild(box);
+
+  box.querySelector(".accept-popup").onclick = () => {
+    socket.emit("accept_room_invitation", {code: d.code});
+  };
+  box.querySelector(".close-popup").onclick = () => box.remove();
+});
+
+socket.on("go_to_room", d => {
+  if (d.game === "bingo90") {
+    location.href = `/sala_bingo/${d.code}`;
+  } else if (d.game === "parchis_deluxe") {
+    location.href = `/parchis/sala/${d.code}`;
+  } else {
+    location.href = `/sala_${d.game}/${d.code}`;
+  }
+});
+
+socket.on("tournament_invitation", d => {
+  const box=document.createElement("div");
+  box.className="invite-popup";
+  box.innerHTML=`<strong>🏆 ${escapeHtml(d.from_name)} te reta a un torneo</strong>
+    <small>${d.games} juegos seleccionados</small>
+    <div><button class="accept-popup">VER TORNEO</button><button class="close-popup">AHORA NO</button></div>`;
+  document.body.appendChild(box);
+  box.querySelector(".accept-popup").onclick=()=>location.href="/torneos/"+d.id;
+  box.querySelector(".close-popup").onclick=()=>box.remove();
+});
+socket.on("toast", d => showToast(d.message));
+socket.on("app_error", d => showToast(d.message));
+</script>
+{% endblock %}

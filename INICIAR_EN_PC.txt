@@ -1,0 +1,15 @@
+JUEGOS ONLINE - VERSION DE TRABAJO EN PC
+========================================
+
+1. Abre CMD o PowerShell en esta carpeta.
+2. Instala dependencias una vez:
+   pip install -r requirements.txt
+3. Arranca para trabajar en local:
+   python app.py
+4. Abre en el navegador:
+   http://127.0.0.1:5000
+
+IMPORTANTE:
+- En PC, si NO defines DATABASE_URL, usa usuarios.db local (SQLite).
+- Esto permite hacer cambios y pruebas sin tocar Render/GitHub/Supabase.
+- Cuando queramos publicar una versión nueva, ya la pasaremos a GitHub.

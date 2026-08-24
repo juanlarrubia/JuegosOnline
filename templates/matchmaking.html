@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Buscando rival · {{ meta.name }}{% endblock %}
+{% block content %}
+<header class="topbar">
+  <div class="brand-mini"><span>{{ meta.icon }}</span><strong>{{ meta.name|upper }}</strong></div>
+  <a class="back-link" href="{{ url_for('juego_modo',game=game) }}">← Cancelar</a>
+</header>
+
+<main class="match-shell-wait">
+  <span class="eyebrow">EMPAREJAMIENTO</span>
+  <h1>Buscando un rival…</h1>
+  <div class="search-orbit">🌐</div>
+  <div class="mode-player">
+    <strong>{{ user.username }}</strong><span class="mode-stars">⭐ {{ user.stars }}</span>
+  </div>
+  <p id="matchStatus" class="match-status">Comprobando jugadores que están esperando…</p>
+  <small class="muted">Si no aparece nadie, entra un rival virtual para que no tengas que esperar.</small>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+let joined=false,done=false;
+async function joinQueue(){
+  const r=await fetch("/api/matchmaking/{{game}}/join",{method:"POST"});
+  const d=await r.json();
+  joined=true;
+  if(d.matched)finish(d);
+}
+async function check(){
+  if(done||!joined)return;
+  try{
+    const d=await (await fetch("/api/matchmaking/{{game}}/status",{cache:"no-store"})).json();
+    if(d.matched)finish(d);
+    else document.getElementById("matchStatus").textContent="Buscando jugador disponible…";
+  }catch(e){}
+}
+function finish(d){
+  done=true;
+  if(d.real){
+    document.getElementById("matchStatus").textContent="✅ ¡Jugador encontrado!";
+  }else if(d.opponent){
+    document.getElementById("matchStatus").textContent=`✅ Rival encontrado: ${d.opponent} · ⭐ ${d.stars}`;
+  }
+  setTimeout(()=>location.href=d.url,650);
+}
+joinQueue();
+setInterval(check,700);
+</script>
+{% endblock %}

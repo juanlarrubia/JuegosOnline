@@ -1,0 +1,543 @@
+{% extends "base.html" %}
+{% block title %}La Brisca Deluxe{% endblock %}
+{% block content %}
+<style>
+.br-shell{width:min(1080px,calc(100% - 18px));margin:8px auto 24px;color:#fff}
+.br-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.br-head h1{margin:0;font-size:clamp(26px,4vw,42px)}.br-head small{font-weight:950;color:#ffd45a;letter-spacing:.12em}
+.br-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.br-hud span{background:#101a2e;border:1px solid #30405f;border-radius:12px;padding:8px;text-align:center;font-size:11px;font-weight:900}.br-hud span:first-child{background:linear-gradient(90deg,#14223d,#0e1b31);border-color:#51698e;color:#fff}
+.br-table{position:relative;min-height:650px;border-radius:34px;border:9px solid #532f18;background:
+radial-gradient(circle at 50% 45%,#23714f,#12553a 68%,#0a3d2a);
+box-shadow:0 24px 65px #0009,inset 0 0 70px #00190f99;overflow:hidden;padding:18px}
+.br-table:before{content:"";position:absolute;inset:10px;border:2px solid #ffffff1c;border-radius:24px;pointer-events:none}
+.br-msg{display:none}
+.br-player{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;gap:4px}
+.br-player .name{background:#07151fcc;border:1px solid #ffffff22;border-radius:999px;padding:4px 9px;font-size:10px;font-weight:950}
+.br-player.active .name{box-shadow:0 0 0 2px #ffd84a,0 0 18px #ffd84a99}
+.br-player .backs{display:flex;justify-content:center}
+.br-captured{position:absolute;z-index:5;display:flex;align-items:center;gap:4px}
+.br-captured .pile{position:relative;width:48px;height:74px}
+.br-captured .pile img{position:absolute;inset:0;width:48px;height:74px;object-fit:cover;border-radius:5px;border:2px solid #f0e5d6;box-shadow:0 4px 8px #0007}
+.br-captured .count{background:#07151fdd;border:1px solid #ffffff33;border-radius:999px;padding:3px 6px;font-size:9px;font-weight:950}
+.br-captured.me{left:18%;bottom:14%}.br-captured.top{left:18%;top:13%}.br-captured.left{left:9%;top:35%}.br-captured.right{right:9%;top:35%}
+.br-flying-card{position:fixed;z-index:9998;width:74px;height:114px;object-fit:cover;border-radius:7px;border:2px solid #f1e5d6;box-shadow:0 12px 28px #000a;pointer-events:none;transition:transform .52s cubic-bezier(.2,.8,.2,1),opacity .52s}
+.br-stock.clickable{cursor:pointer;filter:drop-shadow(0 0 10px #ffd83d)}
+.br-player .backs img{width:54px;height:83px;object-fit:cover;border-radius:6px;border:2px solid #f6e8d8;box-shadow:0 5px 10px #0008;margin-left:-30px}
+.br-player .backs img:first-child{margin-left:0}
+.br-top{top:12px;left:50%;transform:translateX(-50%)}
+.br-left{left:12px;top:50%;transform:translateY(-50%) rotate(90deg)}
+.br-right{right:12px;top:50%;transform:translateY(-50%) rotate(-90deg)}
+.br-center{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);width:38%;height:34%;z-index:3}
+.br-played{position:absolute;width:78px;height:120px;object-fit:cover;border-radius:7px;border:2px solid #eee1cf;box-shadow:0 8px 16px #0008;animation:brthrow .34s cubic-bezier(.2,.78,.25,1)}
+@keyframes brthrow{from{opacity:.45;transform:translate(var(--fromx),var(--fromy)) rotate(var(--fromrot)) scale(.82)}to{opacity:1;transform:translate(0,0) rotate(var(--torot)) scale(1)}}
+.br-stock-zone{position:absolute;right:8%;top:15%;width:135px;height:150px;z-index:5}
+.br-muestra{position:absolute;left:-18px;top:31px;width:72px;height:111px;object-fit:cover;border-radius:7px;transform:rotate(-90deg);border:2px solid #eadfce;box-shadow:0 6px 12px #0007}
+.br-stock{position:absolute;left:42px;top:7px;width:76px;height:117px}
+.br-stock-layer{position:absolute;inset:0;border-radius:7px;background:#ece4db;border:1px solid #bdb3a9}
+.br-stock-card{position:absolute;inset:0;width:76px;height:117px;object-fit:cover;border-radius:7px;border:2px solid #f6e8d8;box-shadow:0 7px 13px #0008}
+.br-stock-count{position:absolute;right:-8px;top:-11px;background:#07131f;border:2px solid #fff;border-radius:999px;min-width:31px;height:31px;display:grid;place-items:center;font-weight:1000;font-size:12px}
+.br-trump-label{position:absolute;top:130px;left:8px;width:120px;text-align:center;background:#07151fcc;border-radius:999px;padding:4px;font-size:9px;font-weight:900}
+.br-self{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:8;width:92%;text-align:center}
+.br-self-head{display:flex;justify-content:center;gap:14px;align-items:center;margin-bottom:3px;font-size:11px;font-weight:950}
+.br-hand{display:flex;justify-content:center;align-items:flex-end;min-height:136px}
+.br-card-btn{border:0;background:transparent;padding:0;margin-left:-16px;cursor:pointer;transition:.18s;filter:drop-shadow(0 8px 7px #0007)}
+.br-card-btn:first-child{margin-left:0}.br-card-btn:hover{transform:translateY(-14px) rotate(-1deg)}
+.br-card-btn:disabled{cursor:default;opacity:.78}
+.br-card-btn img{width:86px;height:132px;object-fit:cover;border-radius:8px;border:2px solid #f4e8d7;background:#fff}
+.br-exchange{position:absolute;left:50%;bottom:158px;transform:translateX(-50%);z-index:12;background:#07151fee;border:1px solid #ffe172;border-radius:15px;padding:10px 12px;text-align:center;box-shadow:0 12px 30px #0008}
+.br-exchange.hidden{display:none}.br-exchange strong{display:block;font-size:12px;margin-bottom:7px}.br-exchange div{display:flex;gap:7px}
+.br-exchange button{border:0;border-radius:9px;padding:8px 11px;font-weight:950}.br-yes{background:#ffd43b}.br-no{background:#35445c;color:#fff}
+.br-over{position:fixed;inset:0;z-index:10000;background:#020710db;display:grid;place-items:center;padding:16px}.br-over.hidden{display:none}
+.br-over-card{width:min(440px,100%);text-align:center;background:linear-gradient(155deg,#172844,#0b1425);border:1px solid #526b8e;border-radius:22px;padding:24px;box-shadow:0 30px 80px #000c}.br-over-card h2{font-size:30px;margin:4px}.br-over-card a{display:block;margin-top:12px;background:linear-gradient(90deg,#ffd43b,#50d8e0);color:#07111d;text-decoration:none;border-radius:12px;padding:12px;font-weight:1000}
+@media(max-width:700px){
+ .br-shell{width:100%;padding:4px}.br-head h1{font-size:26px}.br-hud{grid-template-columns:1fr 1fr}.br-hud span{font-size:9px;padding:6px}.br-hud span:first-child{grid-column:1/-1;font-size:11px;padding:8px}
+ .br-table{min-height:590px;border-width:6px;border-radius:22px;padding:8px}
+ .br-player .backs img{width:39px;height:60px;margin-left:-23px}.br-player .name{font-size:8px;padding:3px 6px}
+ .br-top{top:5px}.br-left{left:-12px}.br-right{right:-12px}
+ .br-center{width:50%;height:31%;top:46%}.br-played{width:55px;height:85px}
+ .br-stock-zone{right:3%;top:17%;transform:scale(.76);transform-origin:top right}
+ .br-self{bottom:4px;width:100%}.br-hand{min-height:112px}.br-card-btn{margin-left:-25px}.br-card-btn img{width:70px;height:107px}
+ .br-exchange{bottom:126px;width:84%;font-size:10px}.br-msg{top:43%;font-size:9px;max-width:72%;overflow:hidden;text-overflow:ellipsis}
+}
+
+/* ===== V60: acabado visual. No cambia reglas ni dinámica ===== */
+.br-table{
+  background:
+    radial-gradient(circle at 50% 44%,rgba(255,255,255,.045),transparent 36%),
+    repeating-linear-gradient(28deg,rgba(255,255,255,.012) 0 1px,transparent 1px 4px),
+    linear-gradient(145deg,#176947 0%,#0f573c 48%,#0b4935 100%)!important;
+  box-shadow:
+    inset 0 0 55px rgba(0,0,0,.34),
+    inset 0 0 0 2px rgba(255,255,255,.08),
+    0 10px 28px rgba(0,0,0,.32)!important;
+  border:10px solid #633b20!important;
+  outline:2px solid #2e190d;
+}
+.br-table:before{
+  content:"";position:absolute;inset:-8px;pointer-events:none;border-radius:inherit;
+  box-shadow:inset 0 0 0 2px rgba(255,213,137,.18),inset 0 0 16px rgba(0,0,0,.45);
+}
+.br-card,.br-played,.br-hand img,.br-stock-zone img,.br-captured img,.br-opponent img{
+  filter:drop-shadow(0 5px 5px rgba(0,0,0,.34));
+}
+.br-played{filter:drop-shadow(0 7px 6px rgba(0,0,0,.42))}
+.br-turn-glow{
+  box-shadow:0 0 0 2px rgba(255,216,63,.9),0 0 18px rgba(255,216,63,.72)!important;
+  animation:brTurnPulse 1.35s ease-in-out infinite alternate;
+}
+@keyframes brTurnPulse{
+  from{filter:brightness(1)}
+  to{filter:brightness(1.16)}
+}
+.br-fly-card{
+  position:absolute;z-index:80;width:58px;height:90px;border-radius:5px;
+  object-fit:cover;pointer-events:none;filter:drop-shadow(0 8px 7px rgba(0,0,0,.45));
+  transition:transform .48s cubic-bezier(.2,.75,.25,1),opacity .48s ease;
+}
+.br-trick-sweep{
+  transition:transform .52s cubic-bezier(.35,.05,.2,1),opacity .52s ease!important;
+}
+#brChampionFx{
+  position:fixed;inset:0;z-index:9998;pointer-events:none;overflow:hidden;
+}
+.br-confetti{
+  position:absolute;top:-20px;width:10px;height:16px;border-radius:2px;
+  background:hsl(var(--h),85%,58%);
+  animation:brConfettiFall 2.5s linear forwards;
+}
+@keyframes brConfettiFall{
+  to{transform:translate(var(--dx),105vh) rotate(720deg);opacity:.85}
+}
+.br-champion-pop{
+  animation:brChampionPop .5s cubic-bezier(.2,1.35,.35,1);
+}
+@keyframes brChampionPop{
+  from{transform:scale(.7);opacity:.2}
+  to{transform:scale(1);opacity:1}
+}
+@media(max-width:700px){
+ .br-table{border-width:7px!important}
+ .br-fly-card{width:52px;height:80px}
+}
+
+</style>
+
+<div class="br-shell">
+ <header class="br-head"><div><small>BARAJA ESPAÑOLA · DELUXE</small><h1>🃏 La Brisca</h1></div><a class="back-link" href="{{url_for('juegos')}}">← Juegos</a></header>
+ <div class="br-hud">
+   <span id="brTurn">Preparando…</span>
+   <span>🂠 Mazo: <b id="brStockCount">40</b></span>
+   <span>🏆 Triunfo: <b id="brTrump">—</b></span>
+   <span>🎯 Serie: <b id="brSeries">0 - 0</b></span>
+ </div>
+ <div class="br-table">
+   <div id="brMsg" class="br-msg">Preparando la partida…</div>
+   <div id="brOpponents"></div>
+   <div id="brCenter" class="br-center"></div><div id="brCaptured"></div>
+
+   <div class="br-stock-zone">
+     <img id="brMuestra" class="br-muestra" src="" alt="Muestra">
+     <div id="brStock" class="br-stock"></div>
+     <div id="brTrumpLabel" class="br-trump-label"></div>
+   </div>
+
+   <div id="brExchange" class="br-exchange hidden">
+      <strong>🔄 Puedes cambiar la muestra antes de robar.</strong>
+      <div><button id="brExchangeYes" class="br-yes">CAMBIAR</button><button id="brExchangeNo" class="br-no">NO CAMBIAR</button></div>
+   </div>
+
+   <div class="br-self">
+     <div class="br-self-head"><span id="brMyName">Tú</span><span>⭐ <b id="brMyStars">0</b></span><span>🏆 <b id="brMyScore">0</b> pts</span></div>
+     <div id="brHand" class="br-hand"></div>
+   </div>
+ </div>
+</div>
+
+<div id="brSetup" class="br-over">
+ <div class="br-over-card">
+  <div style="font-size:58px">🏆</div><h2>Campeonato de Brisca</h2>
+  <p>¿Cuántas partidas hay que ganar para ser campeón?</p>
+  <div style="display:flex;justify-content:center;align-items:center;gap:14px;margin:14px 0">
+   <button id="brLess" style="width:44px;height:44px;border:0;border-radius:10px;font-size:24px;font-weight:900">−</button>
+   <strong id="brTargetPick" style="font-size:34px;min-width:45px">1</strong>
+   <button id="brMore" style="width:44px;height:44px;border:0;border-radius:10px;font-size:24px;font-weight:900">+</button>
+  </div>
+  <button id="brStartSeries" style="width:100%;border:0;border-radius:12px;padding:12px;font-weight:1000;background:linear-gradient(90deg,#ffd43b,#50d8e0)">EMPEZAR CAMPEONATO</button>
+  <p id="brWaitHost" style="display:none">⏳ Esperando a que el anfitrión elija las partidas…</p>
+ </div>
+</div>
+
+<div id="brOver" class="br-over hidden">
+ <div class="br-over-card">
+   <div style="font-size:58px">🏆</div><h2 id="brOverTitle">Partida terminada</h2><p id="brOverText"></p>
+   <a href="{{url_for('juegos')}}">VOLVER A JUEGOS</a>
+ </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+(function(){
+'use strict';
+const CODE={{ codigo|tojson }};
+const ME={{ user.id|tojson }};
+const BACK="{{url_for('static',filename='brisca_cards/back.jpg')}}";
+const PLAY_SOUND="{{url_for('static',filename='audio/card_play_real.wav')}}";
+const DRAW_SOUND="{{url_for('static',filename='audio/card_draw_real.wav')}}";
+const COLLECT_SOUND="{{url_for('static',filename='audio/card_collect.wav')}}";
+const playAudio=new Audio(PLAY_SOUND),drawAudio=new Audio(DRAW_SOUND),collectAudio=new Audio(COLLECT_SOUND);
+playAudio.preload='auto';drawAudio.preload='auto';collectAudio.preload='auto';
+const socket=io();
+let state=null,lastTrickSig='',lastHandCount=null,lastStateTrickLen=0,animateIndex=-1,progressPlayKey='',progressResultKey='';
+
+const suitNames={oros:'OROS',copas:'COPAS',espadas:'ESPADAS',bastos:'BASTOS'};
+function cardUrl(c){return "/static/brisca_cards/"+c.s+"_"+c.n+".jpg";}
+function recordPlay(key){
+ if(!key||progressPlayKey===key)return;progressPlayKey=key;
+ fetch('/api/progreso/jugada',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'brisca_deluxe',code:key})}).catch(()=>{});
+}
+function recordResult(key,won,vsCpu,score){
+ if(!key||progressResultKey===key)return;progressResultKey=key;
+ fetch('/api/progreso/resultado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'brisca_deluxe',code:CODE,won:!!won,vs_cpu:!!vsCpu,score:score||0})}).catch(()=>{});
+}
+
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+function sound(a){try{a.currentTime=0;a.volume=.8;a.play().catch(()=>{});}catch(e){}}
+function flyCard(fromEl,toEl,src,cb){
+ if(!fromEl||!toEl){if(cb)cb();return}
+ const a=fromEl.getBoundingClientRect(),b=toEl.getBoundingClientRect();
+ const img=document.createElement('img');img.className='br-flying-card';img.src=src;
+ img.style.left=a.left+'px';img.style.top=a.top+'px';document.body.appendChild(img);
+ requestAnimationFrame(()=>{img.style.transform=`translate(${b.left-a.left}px,${b.top-a.top}px) scale(.88)`;img.style.opacity='.92';});
+ setTimeout(()=>{img.remove();if(cb)cb();},560);
+}
+
+function renderStock(){
+ const n=state.stock_count||0, hidden=state.hidden_stock_count||0;
+ brStockCount.textContent=n;
+ brStock.innerHTML='';
+ brStock.classList.toggle('clickable',!!state.can_draw);
+ brStock.onclick=state.can_draw?()=>{sound(drawAudio);socket.emit('brisca_draw',{code:CODE});}:null;
+ if(hidden>0){
+   const layers=Math.min(8,Math.max(1,Math.ceil(hidden/5)));
+   for(let i=0;i<layers;i++){
+     const d=document.createElement('i');d.className='br-stock-layer';
+     d.style.transform=`translate(${i*1.4}px,${-i*1.1}px)`;
+     brStock.appendChild(d);
+   }
+   const img=document.createElement('img');img.src=BACK;img.className='br-stock-card';brStock.appendChild(img);
+   const count=document.createElement('b');count.className='br-stock-count';count.textContent=n;brStock.appendChild(count);
+ }else if(n>0){
+   const count=document.createElement('b');count.className='br-stock-count';count.textContent=n;brStock.appendChild(count);
+ }
+ if(state.muestra){
+   brMuestra.src=cardUrl(state.muestra);brMuestra.style.display='block';
+ }else brMuestra.style.display='none';
+ brTrump.textContent=suitNames[state.trump]||state.trump;
+ brTrumpLabel.textContent='MUESTRA · '+(suitNames[state.trump]||'');
+}
+
+function opponentPosition(rel,total){
+ if(total===1)return 'br-top';
+ if(total===2)return rel===1?'br-left':'br-right';
+ return rel===1?'br-left':rel===2?'br-top':'br-right';
+}
+function renderCaptured(){
+ let html='';
+ const mine=state.my_seat,n=state.players.length;
+ for(let seat=0;seat<n;seat++){
+   const p=state.players[seat],count=p.captured_count||0;
+   if(!count)continue;
+   let cls='me';
+   if(seat!==mine){
+     const rel=(seat-mine+n)%n;
+     if(n===2)cls='top';
+     else if(n===3)cls=rel===1?'left':'right';
+     else cls=rel===1?'left':rel===2?'top':'right';
+   }
+   let layers='';
+   const visible=Math.min(6,Math.max(1,Math.ceil(count/4)));
+   for(let i=0;i<visible;i++)layers+=`<img src="${BACK}" style="transform:translate(${i*2}px,${-i*2}px)">`;
+   html+=`<div class="br-captured ${cls}"><div class="pile">${layers}</div><span class="count">🏆 ${count}</span></div>`;
+ }
+ brCaptured.innerHTML=html;
+}
+
+function renderOpponents(){
+ const mine=state.my_seat,n=state.players.length;
+ let html='';
+ for(let step=1;step<n;step++){
+   const seat=(mine+step)%n,p=state.players[seat],pos=opponentPosition(step,n-1);
+   const backs=Array.from({length:p.hand_count},()=>`<img src="${BACK}" alt="Carta">`).join('');
+   html+=`<div class="br-player ${pos} ${state.turn===seat?'active':''}">
+      <span class="name">${p.bot?'🤖 ':''}${esc(p.name)} · ${p.score} pts · ⭐ ${p.stars||0}</span>
+      <div class="backs">${backs}</div></div>`;
+ }
+ brOpponents.innerHTML=html;
+}
+
+function playedPos(seat){
+ const mine=state.my_seat,n=state.players.length,rel=(seat-mine+n)%n;
+
+ // Todas las cartas terminan bastante cerca del centro del tapete.
+ if(rel===0)return {left:'50%',top:'68%',tr:'translate(-50%,-50%) rotate(2deg)'};
+
+ if(n===2)
+   return {left:'50%',top:'27%',tr:'translate(-50%,-50%) rotate(-3deg)'};
+
+ if(n===3)
+   return rel===1
+     ?{left:'30%',top:'40%',tr:'translate(-50%,-50%) rotate(-5deg)'}
+     :{left:'70%',top:'40%',tr:'translate(-50%,-50%) rotate(5deg)'};
+
+ // 4 jugadores
+ if(rel===1)return {left:'25%',top:'48%',tr:'translate(-50%,-50%) rotate(-5deg)'};
+ if(rel===2)return {left:'50%',top:'25%',tr:'translate(-50%,-50%) rotate(2deg)'};
+ return {left:'75%',top:'48%',tr:'translate(-50%,-50%) rotate(5deg)'};
+}
+function throwOrigin(seat){
+ const mine=state.my_seat,n=state.players.length,rel=(seat-mine+n)%n;
+ if(rel===0)return {x:'0px',y:'190px',rot:'5deg'};
+ if(n===2)return {x:'0px',y:'-145px',rot:'-5deg'};
+ if(n===3)return rel===1?{x:'-155px',y:'-25px',rot:'-8deg'}:{x:'155px',y:'-25px',rot:'8deg'};
+ if(rel===1)return {x:'-175px',y:'0px',rot:'-9deg'};
+ if(rel===2)return {x:'0px',y:'-150px',rot:'-4deg'};
+ return {x:'175px',y:'0px',rot:'9deg'};
+}
+function renderCenter(){
+ // MUY IMPORTANTE:
+ // No reconstruimos las cartas que ya están sobre la mesa.
+ // Una carta existente permanece físicamente en el DOM y, por tanto,
+ // NO vuelve a ejecutar ninguna animación cuando juega el siguiente.
+ if(!state.trick.length){
+   brCenter.innerHTML='';
+   return;
+ }
+
+ // Si empezó una baza nueva o por cualquier motivo hay más cartas
+ // dibujadas que en el estado del servidor, limpiamos una sola vez.
+ if(brCenter.children.length>state.trick.length){
+   brCenter.innerHTML='';
+ }
+
+ for(let idx=0;idx<state.trick.length;idx++){
+   const x=state.trick[idx];
+   const key=x.seat+'-'+x.card.s+'-'+x.card.n+'-'+idx;
+   let el=brCenter.children[idx];
+
+   // La carta ya estaba colocada: NO tocarla.
+   if(el && el.dataset.cardKey===key)continue;
+
+   // Si falta esta posición, creamos ÚNICAMENTE la carta nueva.
+   const p=playedPos(x.seat),o=throwOrigin(x.seat);
+   const finalRot=(p.tr.match(/rotate\(([^)]+)\)/)||[])[1]||'0deg';
+   const img=document.createElement('img');
+   img.className='br-played';
+   img.dataset.cardKey=key;
+   img.src=cardUrl(x.card);
+   img.style.left=p.left;
+   img.style.top=p.top;
+   img.style.setProperty('--fromx',o.x);
+   img.style.setProperty('--fromy',o.y);
+   img.style.setProperty('--fromrot',o.rot);
+   img.style.setProperty('--torot',finalRot);
+
+   // Si por alguna desincronización había un elemento distinto
+   // en esa posición, sustituimos sólo ese elemento.
+   if(el)brCenter.replaceChild(img,el);
+   else brCenter.appendChild(img);
+
+   // Al finalizar SU animación, queda convertida en carta fija.
+   img.addEventListener('animationend',function(){
+     img.classList.add('br-played-fixed');
+   },{once:true});
+ }
+}
+
+function renderHand(){
+ const can=state.phase==='play' && state.turn===state.my_seat && !state.over;
+ brHand.innerHTML=state.my_hand.map((c,i)=>`<button class="br-card-btn" ${can?'':'disabled'} data-i="${i}" title="${c.n} de ${c.s}"><img src="${cardUrl(c)}"></button>`).join('');
+ brHand.querySelectorAll('.br-card-btn').forEach(b=>b.onclick=()=>{
+   if(b.disabled)return;
+   socket.emit('brisca_play',{code:CODE,index:+b.dataset.i});
+ });
+ const me=state.players[state.my_seat];
+ brMyName.textContent=me.name;brMyStars.textContent=me.stars||0;brMyScore.textContent=me.score||0;
+}
+
+
+let v60PrevHand=null,v60PrevStock=null,v60PrevPhase=null,v60PrevRound=null,v60ChampionShown='';
+
+function v60RectCenter(el){
+ const r=el.getBoundingClientRect();
+ return {x:r.left+r.width/2,y:r.top+r.height/2};
+}
+function v60Fly(from,to,src){
+ if(!from||!to||!src)return;
+ const table=brCenter.closest('.br-table')||document.body;
+ const tr=table.getBoundingClientRect();
+ const img=document.createElement('img');
+ img.className='br-fly-card';img.src=src;
+ img.style.left=(from.x-tr.left-29)+'px';img.style.top=(from.y-tr.top-45)+'px';
+ table.appendChild(img);
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   img.style.transform=`translate(${to.x-from.x}px,${to.y-from.y}px) scale(.96)`;
+   img.style.opacity='.96';
+ }));
+ setTimeout(()=>img.remove(),560);
+}
+function v60AnimateDraw(old,d){
+ if(!old||!d)return;
+ const oldStock=old.stock_count||0,newStock=d.stock_count||0;
+ if(newStock>=oldStock)return;
+ const stockEl=document.querySelector('.br-stock-zone');
+ if(!stockEl)return;
+ const from=v60RectCenter(stockEl);
+ const myOld=(old.my_hand||[]).length,myNew=(d.my_hand||[]).length;
+ if(myNew>myOld){
+   const hand=document.querySelector('.br-hand');
+   if(hand){
+     const to=v60RectCenter(hand);
+     const c=d.my_hand[d.my_hand.length-1];
+     v60Fly(from,to,c?cardUrl(c):'/static/brisca_cards/back.jpg');
+   }
+ }else{
+   // Robo de rival: reverso hacia la zona aproximada del jugador activo.
+   const opp=document.querySelector('.br-opponent');
+   if(opp)v60Fly(from,v60RectCenter(opp),'/static/brisca_cards/back.jpg');
+ }
+}
+function v60SweepTrick(old,d){
+ if(!old||!old.trick||!old.trick.length||d.trick.length!==0)return;
+ const cards=[...brCenter.querySelectorAll('.br-played')];
+ if(!cards.length)return;
+ const winner=old.last_trick_winner!=null?old.last_trick_winner:old.turn;
+ const mine=old.my_seat,n=old.players.length,rel=(winner-mine+n)%n;
+ let dx=0,dy=0;
+ if(rel===0)dy=230;
+ else if(n===2)dy=-220;
+ else if(rel===1){dx=-240;dy=-20}
+ else if(rel===2){dy=-220}
+ else {dx=240;dy=-20}
+ cards.forEach((el,i)=>{
+   el.classList.add('br-trick-sweep');
+   setTimeout(()=>{el.style.transform=`translate(${dx}px,${dy}px) scale(.72)`;el.style.opacity='0'},i*35);
+ });
+}
+function v60TurnGlow(){
+ document.querySelectorAll('.br-turn-glow').forEach(x=>x.classList.remove('br-turn-glow'));
+ if(!state||state.phase==='over')return;
+ if(state.turn===state.my_seat){
+   const hand=document.querySelector('.br-hand');
+   if(hand)hand.classList.add('br-turn-glow');
+ }else{
+   const names=[...document.querySelectorAll('.br-opponent')];
+   const mine=state.my_seat,n=state.players.length,rel=(state.turn-mine+n)%n;
+   const target=names[Math.max(0,rel-1)];
+   if(target)target.classList.add('br-turn-glow');
+ }
+}
+function v60Champion(){
+ if(!state||!state.over||!state.series||!state.series.champ_over)return;
+ const key=CODE+'-'+state.series.round_no+'-'+state.winner;
+ if(v60ChampionShown===key)return;v60ChampionShown=key;
+ const fx=document.getElementById('brChampionFx');if(!fx)return;
+ fx.innerHTML='';
+ for(let i=0;i<42;i++){
+   const p=document.createElement('i');p.className='br-confetti';
+   p.style.left=(Math.random()*100)+'vw';
+   p.style.setProperty('--h',Math.floor(Math.random()*360));
+   p.style.setProperty('--dx',((Math.random()-.5)*240)+'px');
+   p.style.animationDelay=(Math.random()*.45)+'s';
+   fx.appendChild(p);
+ }
+ const card=document.querySelector('#brOver .br-over-card');
+ if(card){card.classList.remove('br-champion-pop');void card.offsetWidth;card.classList.add('br-champion-pop')}
+ setTimeout(()=>fx.innerHTML='',3100);
+}
+
+function render(){
+ if(!state)return;
+ brMsg.textContent=state.message||'';
+ const turnP=state.players[state.turn];
+ let statusText=
+ state.phase==='over'?'🏁 PARTIDA TERMINADA':
+ state.phase==='trick_pause'?'🏆 '+(state.message||'BAZA TERMINADA'):
+ state.phase==='draw'?(state.can_draw?'🂠 TE TOCA ROBAR · pulsa el mazo':('🂠 '+(state.message||'ROBO DE CARTAS'))):
+ state.phase==='exchange'?(state.exchange_seat===state.my_seat?'🔄 PUEDES CAMBIAR LA MUESTRA':('🔄 '+(state.message||'CAMBIO DE MUESTRA'))):
+ (state.turn===state.my_seat?'👉 TU TURNO':('🎴 TURNO DE '+(turnP?turnP.name:'')));
+
+ // Si el servidor manda una acción concreta, la mostramos arriba.
+ if(state.message && state.phase!=='play')statusText=state.message;
+ brTurn.textContent=statusText;
+
+ renderStock();renderOpponents();renderCenter();renderHand();renderCaptured();
+ v60TurnGlow();
+ brExchange.classList.toggle('hidden',!state.can_exchange);
+
+
+ const ser=state.series||{configured:false,target:1,wins:[]};
+ brSeries.textContent=state.players.map((p,i)=>p.name+' '+(ser.wins[i]||0)).join(' · ');
+
+ if(ser.configured){
+   brSetup.classList.add('hidden');
+   recordPlay(CODE+'_r'+ser.round_no);
+ }else{
+   brSetup.classList.remove('hidden');
+   const host=String(state.players[0].id)===String(ME);
+   brStartSeries.style.display=host?'block':'none';
+   brLess.style.display=host?'inline-block':'none';
+   brMore.style.display=host?'inline-block':'none';
+   brTargetPick.style.display=host?'inline-block':'none';
+   brWaitHost.style.display=host?'none':'block';
+ }
+
+ if(!state.over){
+   brOver.classList.add('hidden');
+ }
+ if(state.over){
+   const w=state.players[state.winner],key=CODE+'_r'+ser.round_no;
+   const vsCpu=state.players.some((p,i)=>i!==state.my_seat&&p.bot);
+   recordResult(key,state.winner===state.my_seat,vsCpu,state.players[state.my_seat].score||0);
+   brOverTitle.textContent=ser.champ_over?(state.winner===state.my_seat?'🎉 ¡ERES CAMPEÓN!':'🏆 '+(w?w.name:'Jugador')+' es campeón'):(state.winner===state.my_seat?'🎉 ¡HAS GANADO LA PARTIDA!':'🏆 '+(w?w.name:'Jugador')+' gana la partida');
+   brOverText.textContent=state.players.map((p,i)=>p.name+': '+p.score+' pts · Serie '+(ser.wins[i]||0)).join(' · ');
+   brOver.classList.remove('hidden');
+   const a=brOver.querySelector('a');a.style.display='none';
+   let btn=document.getElementById('brNextGameBtn');
+   if(!btn){btn=document.createElement('button');btn.id='brNextGameBtn';btn.style.cssText='width:100%;margin-top:12px;border:0;border-radius:12px;padding:12px;font-weight:1000;background:linear-gradient(90deg,#ffd43b,#50d8e0)';brOver.querySelector('.br-over-card').appendChild(btn);}
+   const host=String(state.players[0].id)===String(ME);
+   btn.style.display=host?'block':'none';
+   btn.textContent=ser.champ_over?'NUEVO CAMPEONATO':'SIGUIENTE PARTIDA';
+   btn.onclick=()=>{brOver.classList.add('hidden');progressResultKey='';socket.emit('brisca_next_game',{code:CODE});};
+ }
+}
+
+brLess.onclick=()=>brTargetPick.textContent=Math.max(1,+brTargetPick.textContent-1);
+brMore.onclick=()=>brTargetPick.textContent=Math.min(9,+brTargetPick.textContent+1);
+brStartSeries.onclick=()=>socket.emit('brisca_configure',{code:CODE,target:+brTargetPick.textContent||1});
+brExchangeYes.onclick=()=>socket.emit('brisca_exchange',{code:CODE,yes:true});
+brExchangeNo.onclick=()=>socket.emit('brisca_exchange',{code:CODE,yes:false});
+socket.on('connect',()=>socket.emit('brisca_game_join',{code:CODE}));
+socket.on('brisca_state',d=>{
+ const old=state;
+ if(old){
+   v60AnimateDraw(old,d);
+   v60SweepTrick(old,d);
+ }
+ if(old){
+   if(d.trick.length>old.trick.length){sound(playAudio);}
+   if(old.trick.length>0 && d.trick.length===0)sound(collectAudio);
+   const oldMe=old.my_hand?old.my_hand.length:0,newMe=d.my_hand?d.my_hand.length:0;
+   if(newMe>oldMe)sound(drawAudio);
+   if(d.series&&old.series&&d.series.round_no!==old.series.round_no){
+     progressResultKey='';
+     brOver.classList.add('hidden');
+   }
+ }
+ state=d;render();v60Champion();
+});
+})();
+</script>
+{% endblock %}

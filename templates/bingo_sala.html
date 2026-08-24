@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Sala Bingo {{ codigo }}{% endblock %}
+{% block content %}
+<header class="topbar">
+  <div class="brand-mini"><span>🎱</span><strong>BINGO 90 DELUXE</strong></div>
+  <a class="back-link" href="{{ url_for('menu') }}">← Salir</a>
+</header>
+
+<section class="lobby-hero bingo-lobby-hero">
+  <div>
+    <span class="eyebrow">SALA DE BINGO</span>
+    <h1>Que entren los jugadores</h1>
+    <p>El anfitrión inicia cuando quiera. También puedes añadir rivales CPU.</p>
+  </div>
+  <div class="room-code-box"><small>CÓDIGO DE SALA</small><strong>{{ codigo }}</strong><span>Compártelo para entrar</span></div>
+</section>
+
+<section class="lobby-grid">
+  <div class="card panel lobby-main">
+    <div class="panel-head">
+      <div><span class="eyebrow">JUGADORES</span><h3><span id="playerCount">{{ sala.players|length }}</span> preparados</h3></div>
+      <span class="status-dot"></span>
+    </div>
+    <div id="roomPlayers" class="player-grid"></div>
+    <div class="ticket-selector-box">
+      <div>
+        <span class="eyebrow">TUS CARTONES</span>
+        <h3>¿Con cuántos quieres jugar?</h3>
+      </div>
+      <div class="ticket-count-buttons">
+        {% for n in [1,2,3,4] %}
+        <button type="button" class="ticket-count-btn {% if n == 1 %}active{% endif %}" onclick="setTicketCount({{ n }},this)">{{ n }}</button>
+        {% endfor %}
+      </div>
+    </div>
+
+
+
+    <div class="ticket-preview-section">
+      <div class="ticket-preview-head"><span class="eyebrow">VISTA PREVIA</span><strong id="ticketPreviewTitle">Tu cartón</strong></div>
+      <div id="ticketPreview" class="lobby-ticket-preview"></div>
+    </div>
+    <div class="bingo-prize-preview">
+      {% for p in sala.prize_defs %}
+      <div><span>{{ p.icon }}</span><strong>{{ p.name }}</strong><small>+{{ p.points }} pts</small></div>
+      {% endfor %}
+    </div>
+
+    {% if user.id == sala.host_id %}
+    <div class="host-controls">
+      <button class="cpu-button" onclick="socket.emit('add_bot',{code:CODE})">＋ 🤖 AÑADIR CPU</button>
+      <button class="start-button bingo-start" onclick="socket.emit('start_game',{code:CODE})">🎱 EMPEZAR BINGO</button>
+    </div>
+    {% else %}
+    <div class="waiting-banner">⏳ Esperando a que <strong>{{ sala.host_name }}</strong> inicie el Bingo...</div>
+    {% endif %}
+  </div>
+
+  {% if user.id == sala.host_id %}
+  <aside class="card panel invite-panel">
+    <span class="eyebrow">INVITAR</span><h3>Amigos conectados</h3>
+    <div class="friend-list">
+      {% for amigo in amigos %}
+      <div class="friend-row">
+        <span class="avatar">{{ amigo.username[0]|upper }}</span>
+        <div><strong>{{ amigo.username }} <span class="stars-mini">⭐ {{ amigo.stars }}</span></strong><small id="st-{{ amigo.id }}">Comprobando...</small></div>
+        <button class="invite-small" id="inv-{{ amigo.id }}" onclick="inviteFriend({{ amigo.id }}, this)">INVITAR</button>
+      </div>
+      {% else %}<div class="empty">No tienes amigos añadidos todavía.</div>{% endfor %}
+    </div>
+  </aside>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const socket=io(), CODE="{{ codigo }}", ME={{ user.id }}, HOST={{ sala.host_id }};
+socket.on("connect",()=>socket.emit("join_bingo_lobby",{code:CODE}));
+socket.on("bingo_lobby_state",renderLobby);
+socket.on("lobby_state",renderLobby);
+socket.on("game_started",d=>{if(d.game==="bingo90") location.href="/bingo/"+d.code});
+socket.on("toast",d=>toast(d.message));
+socket.on("app_error",d=>toast(d.message));
+
+async function setTicketCount(n,btn){
+  document.querySelectorAll(".ticket-count-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  const body=new URLSearchParams();body.set("count",n);
+  try{
+    const r=await fetch(`/bingo/${CODE}/cartones`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});
+    const d=await r.json();
+    if(!d.ok){toast(d.error||"No se pudieron crear los cartones");return}
+    renderTicketPreview(d.tickets);
+    toast(`Preparados ${d.count} cartón${d.count===1?"":"es"}`);
+  }catch(e){toast("Error creando los cartones");}
+}
+function renderTicketPreview(tickets){
+  const box=document.getElementById("ticketPreview");
+  document.getElementById("ticketPreviewTitle").textContent=tickets.length===1?"Tu cartón":`Tus ${tickets.length} cartones`;
+  box.innerHTML=tickets.map((t,i)=>`<div class="preview-ticket-wrap"><small>CARTÓN ${i+1}</small><div class="spanish-ticket preview-ticket">${
+    t.map(row=>row.map(n=>n===null?`<div class="ticket-cell blank"></div>`:`<div class="ticket-cell"><span>${n}</span></div>`).join("")).join("")
+  }</div></div>`).join("");
+}
+function renderLobby(d){
+  document.getElementById("playerCount").textContent=d.players.length;
+  document.getElementById("roomPlayers").innerHTML=d.players.map(p=>`
+  <div class="player-tile ${p.bot?'bot':''}">
+    <div class="player-orb">${p.bot&&!p.fake_user?'🤖':p.name[0].toUpperCase()}</div>
+    <strong>${p.name} <span class="stars-mini">⭐ ${p.stars||0}</span></strong>
+    <small>${p.id===d.host_id?'👑 ANFITRIÓN':p.bot&&!p.fake_user?'CPU':p.fake_user?'RIVAL ONLINE':'LISTO'}</small>
+    ${p.bot&&ME===HOST?`<button onclick="socket.emit('remove_bot',{code:CODE,bot_id:'${p.id}'})">×</button>`:''}
+  </div>`).join("");
+}
+async function refreshFriends(){
+  const r=await fetch("/estado_amigos"), s=await r.json();
+  Object.entries(s).forEach(([id,on])=>{
+    const st=document.getElementById("st-"+id),b=document.getElementById("inv-"+id);
+    if(st){st.textContent=on?"● ONLINE":"● DESCONECTADO";st.className=on?"online-label":"offline-label"} if(b)b.disabled=!on;
+  });
+}
+function inviteFriend(id, btn){
+  socket.emit("invite_to_room",{code:CODE,friend_id:id});
+  const old=btn.textContent;
+  btn.textContent="ENVIADA ✓";
+  btn.disabled=true;
+  setTimeout(()=>{btn.textContent=old;refreshFriends();},1800);
+}
+function toast(t){const e=document.createElement("div");e.className="live-toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2200)}
+refreshFriends();setInterval(refreshFriends,3000);
+const firstBtn=document.querySelector(".ticket-count-btn.active")||document.querySelector(".ticket-count-btn");
+if(firstBtn)setTicketCount(Number(firstBtn.textContent.trim()),firstBtn);
+</script>
+{% endblock %}

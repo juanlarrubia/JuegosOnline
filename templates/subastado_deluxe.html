@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% block content %}
+<div class="tute-shell">
+  <div class="tute-title"><div><span class="eyebrow">BARAJA ESPAÑOLA</span><h1>Tute Subastado</h1></div><div class="tute-score"><span>Contrato</span><b id="contract">—</b></div></div>
+  <div class="tute-table">
+    <div class="cpu-seat"><div class="avatar">🤖</div><strong>CPU</strong><span id="cpuCards">10 cartas</span></div>
+    <div class="auction-panel" id="auction">
+      <small>SUBASTA ACTUAL</small><strong id="currentBid">70</strong>
+      <div class="bid-row"><button onclick="bid(5)">+5</button><button onclick="bid(10)">+10</button><button onclick="passBid()">PASAR</button><button class="gold" onclick="award()">ME LA QUEDO</button></div>
+      <p id="auctionMsg">La CPU abre en 70. Supera la puja o pasa.</p>
+    </div>
+    <div id="trick" class="tute-trick"><div class="trick-placeholder">BAZA</div></div>
+    <div id="trumpBadge" class="trump-badge">TRIUNFO · SIN ELEGIR</div>
+  </div>
+  <div class="player-zone"><div class="player-label"><b>TUS CARTAS</b><span id="points">0 puntos</span></div><div id="spanishHand" class="spanish-hand"></div></div>
+</div>
+<script>
+const suits=[["oros","OROS"],["copas","COPAS"],["espadas","ESPADAS"],["bastos","BASTOS"]], nums=[1,2,3,4,5,6,7,10,11,12];
+let cards=[],bidN=75,playing=false,score=0,trump=null;
+for(let i=0;i<10;i++){let s=suits[Math.floor(Math.random()*4)];cards.push({n:nums[Math.floor(Math.random()*nums.length)],s:s[0],sn:s[1]})}
+function suitArt(c){
+ const icons={oros:"●",copas:"♜",espadas:"†",bastos:"♣"};
+ let count=c.n>7?1:Math.min(c.n,7), arr="";
+ for(let i=0;i<count;i++)arr+=`<i>${icons[c.s]}</i>`;
+ return `<div class="spanish-pips ${c.s}">${arr}</div>`;
+}
+function face(c){return c.n===10?"SOTA":c.n===11?"CABALLO":c.n===12?"REY":c.n}
+function card(c,i,disabled=false){return `<button class="spanish-card-real ${c.s}" ${disabled?"":`onclick="playCard(${i})"`}><span class="corner">${c.n}<small>${c.sn[0]}</small></span>${suitArt(c)}<strong>${face(c)}</strong><span class="corner bottom">${c.n}<small>${c.sn[0]}</small></span></button>`}
+function render(){spanishHand.innerHTML=cards.map((c,i)=>card(c,i)).join("");currentBid.textContent=bidN;points.textContent=score+" puntos";cpuCards.textContent=Math.max(0,10-(10-cards.length))+" cartas"}
+function bid(n){if(playing)return;bidN+=n;auctionMsg.textContent="Has pujado "+bidN+". La CPU está pensando…";setTimeout(()=>{if(Math.random()>.45){bidN+=5;auctionMsg.textContent="CPU sube a "+bidN;render()}else auctionMsg.textContent="CPU pasa. Puedes quedarte la subasta.";},500);render()}
+function passBid(){if(playing)return;contract.textContent=bidN;auctionMsg.textContent="CPU se queda el contrato. Comienza la partida.";start(false)}
+function award(){if(playing)return;contract.textContent=bidN;auctionMsg.textContent="Te quedas el contrato. La primera carta marca triunfo.";start(true)}
+function start(me){playing=true;setTimeout(()=>auction.classList.add("auction-small"),400);if(!me)setTimeout(cpuLead,700)}
+function cpuLead(){let s=suits[Math.floor(Math.random()*4)],c={n:nums[Math.floor(Math.random()*nums.length)],s:s[0],sn:s[1]};trick.innerHTML=card(c,0,true)}
+function playCard(i){if(!playing)return;let c=cards.splice(i,1)[0];if(!trump){trump=c.s;trumpBadge.textContent="TRIUNFO · "+c.sn;trumpBadge.className="trump-badge "+c.s}trick.innerHTML+=card(c,0,true);score+=Math.floor(Math.random()*12);render();setTimeout(()=>{trick.innerHTML='<div class="trick-placeholder">SIGUIENTE BAZA</div>';if(cards.length)cpuLead()},1000)}
+render();
+</script>
+<script>
+fetch("/api/progreso/jugada",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({game:"subastado_deluxe",code:"{{ codigo }}"})
+}).then(r=>r.json()).then(d=>{
+  if(d.new_medals&&d.new_medals.length){
+    d.new_medals.forEach(m=>{
+      const e=document.createElement("div");e.className="live-toast medal-toast";
+      e.textContent=`🏅 ${m.title} · +${m.stars} ⭐`;
+      document.body.appendChild(e);setTimeout(()=>e.remove(),3500);
+    });
+  }
+}).catch(()=>{});
+</script>
+{% endblock %}

@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+{% block title %}Conecta 4 Deluxe{% endblock %}
+{% block content %}
+<style>
+.c4x-shell{position:relative;width:min(760px,calc(100% - 18px));margin:10px auto 24px;color:#fff;user-select:none;padding:14px;border-radius:28px;background:
+radial-gradient(circle at 10% 10%,#6d4cff25,transparent 34%),
+radial-gradient(circle at 88% 22%,#23d5ff1d,transparent 32%),
+linear-gradient(160deg,#10182d,#090f1f 68%);box-shadow:0 22px 65px #0007,inset 0 1px 0 #ffffff12}
+.c4x-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.c4x-head h1{margin:0;font-size:clamp(27px,5vw,43px)}
+.c4x-head small{font-weight:900;color:#ffd43b;letter-spacing:.08em}
+.c4x-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:#111b31;border:1px solid #334466;border-radius:14px;padding:8px;margin-bottom:8px}
+.c4x-hud span{background:#091225;border-radius:10px;padding:7px 5px;text-align:center;font-size:11px;font-weight:900}
+.c4x-msg{text-align:center;background:#121d33;border-radius:12px;padding:8px;margin:7px 0;font-weight:850;min-height:38px;display:grid;place-items:center}
+.c4x-stage{position:relative;width:min(100%,610px);margin:auto;padding-top:58px}
+.c4x-preview-row{position:absolute;left:0;right:0;top:0;height:55px;display:grid;grid-template-columns:repeat(7,1fr);pointer-events:none}
+.c4x-preview-cell{display:grid;place-items:center;position:relative}
+.c4x-preview-disc{width:70%;aspect-ratio:1;border-radius:50%;opacity:0;transform:translateY(-8px) scale(.85);transition:opacity .12s,transform .12s;box-shadow:inset 0 -6px 10px #0004,0 5px 12px #0006}
+.c4x-preview-disc.show{opacity:.9;transform:translateY(0) scale(1)}
+.c4x-board{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:5px;padding:10px;background:linear-gradient(#1974df,#0b55b9);border-radius:18px 18px 4px 4px;border:6px solid #073f88;box-shadow:0 14px 28px #0007,inset 0 4px 0 #ffffff35;overflow:visible}
+.c4x-slot{position:relative;aspect-ratio:1;border-radius:50%;background:#f4f7fb;border:3px solid #064b98;box-shadow:inset 0 5px 9px #0004;overflow:visible;z-index:2}
+.c4x-slot::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:3px solid #064b98;box-shadow:inset 0 5px 9px #0004;z-index:3;pointer-events:none}
+.c4x-disc{z-index:1}
+.c4x-disc.c4x-winning{animation:c4winpulse .72s ease-in-out infinite alternate;filter:brightness(1.22) saturate(1.2)}
+@keyframes c4winpulse{from{transform:scale(1);box-shadow:inset 0 -7px 12px #0004,inset 0 5px 7px #fff4,0 0 6px #fff8}to{transform:scale(1.10);box-shadow:inset 0 -7px 12px #0004,inset 0 5px 7px #fff4,0 0 24px #fff,0 0 36px #ffd83d}}
+.c4x-confetti{position:fixed;top:-20px;z-index:10020;width:9px;height:14px;border-radius:2px;pointer-events:none;animation:c4confetti 1.8s linear forwards}
+@keyframes c4confetti{to{transform:translate(var(--dx),105vh) rotate(var(--rot));opacity:.15}}
+.c4x-tournament-badge{margin:5px auto 9px;width:max-content;max-width:100%;padding:6px 12px;border-radius:999px;background:#251c4d;border:1px solid #735cff;color:#dbcfff;font-size:11px;font-weight:950;letter-spacing:.06em}
+.c4x-tournament-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.c4x-tournament-actions a{display:grid;place-items:center;text-decoration:none;border-radius:13px;padding:12px;font-weight:950}
+.c4x-tournament-next{background:linear-gradient(90deg,#ffd32c,#54dce4);color:#07111e}
+.c4x-tournament-end{background:#263650;color:#fff}
+.c4x-disc{position:absolute;inset:4%;border-radius:50%;box-shadow:inset 0 -7px 12px #0004,inset 0 5px 7px #fff4,0 2px 3px #0005}
+.c4x-red{background:radial-gradient(circle at 35% 28%,#ff7a83,#e52f3b 52%,#a80f18)}
+.c4x-yellow{background:radial-gradient(circle at 35% 28%,#fff58b,#ffd21f 52%,#c99700)}
+.c4x-disc.c4x-drop{animation:c4fall var(--fall,.78s) cubic-bezier(.16,.72,.22,1.05) both}
+@keyframes c4fall{from{transform:translateY(calc(-1 * var(--drop-distance,400px)))}70%{transform:translateY(3px)}85%{transform:translateY(-5px)}to{transform:translateY(0)}}
+.c4x-board-overlay{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr);z-index:5}
+.c4x-col{border:0;background:transparent;cursor:pointer;padding:0;touch-action:manipulation}
+.c4x-col:hover{background:#ffffff0b}.c4x-col:disabled{cursor:default}
+.c4x-tray-wrap{position:relative;margin:-2px auto 10px;width:min(100%,610px);background:linear-gradient(#1470d5,#0750a9);border:5px solid #063f88;border-top:3px solid #0b57ad;border-radius:0 0 22px 22px;padding:7px 12px 10px;box-shadow:0 12px 22px #0006,inset 0 -7px 10px #001f5b88}
+.c4x-tray-title{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-weight:900;color:#eaf4ff;margin-bottom:5px}
+.c4x-trays{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.c4x-tray{min-height:46px;max-height:52px;position:relative;display:flex;flex-wrap:nowrap;align-items:center;justify-content:center;padding:3px 7px;overflow:hidden;background:linear-gradient(180deg,#0d5bb7,#0b4a98);border-radius:5px 5px 13px 13px;box-shadow:inset 0 7px 9px #002f7388}
+.c4x-mini{flex:0 0 27px;width:27px;height:27px;border-radius:50%;margin:0 -4px;box-shadow:inset 0 -5px 7px #0005,inset 0 3px 4px #fff5,0 3px 3px #001d4caa;transition:.25s;transform:rotate(var(--rot,0deg))}
+.c4x-mini.used{opacity:0;transform:scale(.2);width:0;margin:0}
+.c4x-champ{margin-top:8px;text-align:center;font-size:12px;font-weight:900;color:#ffe36a}
+.c4x-modal{position:fixed;inset:0;z-index:9999;background:#030712e8;display:grid;place-items:center;padding:14px;backdrop-filter:blur(5px)}
+.c4x-modal.hidden{display:none}.c4x-card{width:min(430px,100%);background:linear-gradient(160deg,#172844,#0b1425);border:1px solid #476080;border-radius:22px;padding:22px;text-align:center;box-shadow:0 24px 80px #000b}
+.c4x-card h2{margin:0 0 7px;font-size:30px}.c4x-card p{color:#c5d0df;margin:5px 0 16px}
+.c4x-number{display:flex;align-items:center;justify-content:center;gap:12px;margin:12px 0 18px}.c4x-number button{width:46px;height:46px;border:0;border-radius:12px;font-size:25px;font-weight:1000}.c4x-number strong{font-size:34px;min-width:55px}
+.c4x-start,.c4x-next{border:0;border-radius:13px;padding:13px 18px;font-weight:1000;background:linear-gradient(90deg,#ffd32c,#54dce4);color:#07111e;width:100%;font-size:15px}
+@media(max-width:600px){
+ .c4x-shell{width:100%;padding:5px;margin:0 auto}.c4x-head{padding:2px 3px}.c4x-head h1{font-size:27px}.c4x-head .back-link{font-size:10px}
+ .c4x-hud{grid-template-columns:1fr 1fr;padding:5px;gap:4px}.c4x-hud span{font-size:9px;padding:5px 3px}
+ .c4x-stage{padding-top:44px}.c4x-preview-row{height:42px}.c4x-board{gap:2px;padding:5px;border-width:4px;border-radius:12px}
+ .c4x-slot{border-width:2px}.c4x-tray-wrap{padding:5px;margin-top:6px}.c4x-tray{min-height:36px;max-height:40px}.c4x-mini{flex-basis:21px;width:21px;height:21px;margin:0 -4px}
+ .c4x-msg{font-size:11px;padding:6px;min-height:31px}.c4x-champ{font-size:10px;margin-top:5px}
+}
+</style>
+
+<div class="c4x-shell">
+  <header class="c4x-head">
+    <div><small>ESTRATEGIA · DELUXE</small><h1>🔴 Conecta 4</h1></div>
+    <a class="back-link" href="{{url_for('juegos')}}">← Juegos</a>
+  </header>
+
+  <div class="c4x-hud">
+    <span id="c4Turn">TU TURNO · 🔴</span>
+    <span>🎯 A <b id="targetWins">1</b> victoria</span>
+    <span>🔴 <b id="p1Name">Tú</b>: <b id="myWins">0</b></span>
+    <span>🟡 <b id="p2Name">CPU</b>: <b id="cpuWins">0</b></span>
+  </div>
+
+  {% if sala is defined and sala.get("tournament_id") %}
+  <div class="c4x-tournament-badge">🏆 TORNEO #{{ sala.tournament_id }} · SERIE A {{ sala.get("tournament_target",1) }} VICTORIA{% if sala.get("tournament_target",1) != 1 %}S{% endif %}</div>
+{% endif %}
+  <div id="c4Msg" class="c4x-msg">Toca una columna para dejar caer tu ficha.</div>
+
+  <div class="c4x-stage">
+    <div id="previewRow" class="c4x-preview-row"></div>
+    <div id="c4Board" class="c4x-board"></div>
+    <div id="colOverlay" class="c4x-board-overlay"></div>
+  </div>
+
+  <div class="c4x-tray-wrap">
+    <div class="c4x-tray-title"><span>🔴 FICHAS <b id="trayP1">JUGADOR 1</b></span><span>🟡 FICHAS <b id="trayP2">JUGADOR 2</b></span></div>
+    <div class="c4x-trays"><div id="redTray" class="c4x-tray"></div><div id="yellowTray" class="c4x-tray"></div></div>
+  </div>
+  <div id="champInfo" class="c4x-champ">Campeón: primero en ganar 1 partida.</div>
+</div>
+
+<div id="setupModal" class="c4x-modal">
+  <div class="c4x-card">
+    <div style="font-size:54px">🏆</div>
+    <h2>Campeonato Conecta 4</h2>
+    <p>¿Cuántas partidas hay que ganar para ser campeón?</p>
+    <div class="c4x-number"><button id="lessWins" type="button">−</button><strong id="winsPick">1</strong><button id="moreWins" type="button">+</button></div>
+    <button id="startChamp" class="c4x-start" type="button">EMPEZAR CAMPEONATO</button>
+  </div>
+</div>
+
+<div id="roundModal" class="c4x-modal hidden">
+  <div class="c4x-card">
+    <div id="roundIcon" style="font-size:54px">🏆</div>
+    <h2 id="roundTitle">Partida terminada</h2>
+    <p id="roundText"></p>
+    <button id="nextRound" class="c4x-next" type="button">SIGUIENTE PARTIDA</button>
+    <a href="{{url_for('juegos')}}" style="display:block;margin-top:10px;padding:12px;border-radius:13px;background:#263650;color:#fff;text-decoration:none;font-weight:900">SALIR AL MENÚ PRINCIPAL</a>
+  </div>
+</div>
+
+
+<div id="tournamentResultModal" class="c4x-modal hidden">
+  <div class="c4x-card">
+    <div style="font-size:58px">🏆</div>
+    <h2 id="tournamentResultTitle">Serie terminada</h2>
+    <p id="tournamentResultText"></p>
+    <div class="c4x-tournament-actions">
+      <a id="tournamentNextBtn" class="c4x-tournament-next" href="#">SIGUIENTE JUEGO</a>
+      <a id="tournamentEndBtn" class="c4x-tournament-end" href="#">VER TORNEO</a>
+    </div>
+  </div>
+</div>
+
+<div id="waitHostModal" class="c4x-modal hidden">
+  <div class="c4x-card">
+    <div style="font-size:54px">⏳</div>
+    <h2>Esperando al anfitrión</h2>
+    <p id="waitHostText">El anfitrión está eligiendo el número de partidas para ganar el campeonato.</p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+(function(){
+'use strict';
+var B,turn,roundOver=false,champOver=false,target=1,myWins=0,cpuWins=0,usedRed=0,usedYellow=0,hoverCol=-1,animating=false,winnerVisual=0,localStarter=null;
+var ROOM={{ codigo|tojson if codigo is defined else 'null' }};
+var TOURNAMENT_ID={{ sala.get('tournament_id')|tojson if sala is defined else 'null' }};
+var TOURNAMENT_TARGET={{ sala.get('tournament_target')|tojson if sala is defined else 'null' }};
+var TOURNAMENT_MODE=!!TOURNAMENT_ID;
+var USER_ID={{ user.id|tojson if user is defined else 'null' }};
+var PLAYERS={{ sala.players|tojson if sala is defined else '[]' }};
+var ONLINE=!!ROOM && PLAYERS.length>1 && !PLAYERS[1].bot;
+var HOST_ID={{ sala.host_id|tojson if sala is defined else 'null' }};
+var IS_HOST=String(USER_ID)===String(HOST_ID) || (PLAYERS.length && String(USER_ID)===String(PLAYERS[0].id));
+var MY_INDEX=ONLINE?PLAYERS.findIndex(function(p){return String(p.id)===String(USER_ID);}):0;
+if(MY_INDEX<0)MY_INDEX=0;
+var sock=ONLINE?io():null;
+var dropAudio=new Audio("{{ url_for('static',filename='audio/connect4_drop.wav') }}");
+var applauseAudio=new Audio("{{ url_for('static',filename='audio/applause.wav') }}");
+dropAudio.preload='auto'; applauseAudio.preload='auto';
+var localRoundNo=0,progressRoundKey='',progressResultKey='',stateStarterRound=0;
+var board=document.getElementById('c4Board'),overlay=document.getElementById('colOverlay'),preview=document.getElementById('previewRow');
+var msg=document.getElementById('c4Msg'),turnEl=document.getElementById('c4Turn');
+
+function playDropSound(){
+ try{dropAudio.currentTime=0;dropAudio.volume=.9;dropAudio.play().catch(function(){});}catch(e){}
+}
+function playApplause(){
+ try{applauseAudio.currentTime=0;applauseAudio.volume=.8;applauseAudio.play().catch(function(){});}catch(e){}
+}
+
+function progressPlay(key){
+ if(!key || progressRoundKey===key)return;
+ progressRoundKey=key;
+ fetch('/api/progreso/jugada',{
+   method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({game:'conecta4_deluxe',code:key})
+ }).then(function(r){return r.json();}).then(function(d){
+   if(d&&d.new_medals&&d.new_medals.length){
+     msg.textContent='🏅 Nueva medalla conseguida';
+   }
+ }).catch(function(){});
+}
+function progressResult(key,won,vsCpu){
+ if(!key || progressResultKey===key)return;
+ progressResultKey=key;
+ fetch('/api/progreso/resultado',{
+   method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({game:'conecta4_deluxe',code:ROOM||key,won:!!won,vs_cpu:!!vsCpu,score:0})
+ }).then(function(r){return r.json();}).then(function(d){
+   if(d&&d.new_medals&&d.new_medals.length){
+     setTimeout(function(){msg.textContent='🏅 '+d.new_medals[0].title+' · ⭐ '+d.stars;},700);
+   }
+ }).catch(function(){});
+}
+
+function emptyBoard(){return Array.from({length:6},function(){return Array(7).fill(0);});}
+function discClass(p){return p===1?'c4x-red':'c4x-yellow';}
+
+function buildPreview(){var h='';for(var c=0;c<7;c++)h+='<div class="c4x-preview-cell"><div id="pv'+c+'" class="c4x-preview-disc"></div></div>';preview.innerHTML=h;}
+function updatePreview(){for(var c=0;c<7;c++){var el=document.getElementById('pv'+c);el.className='c4x-preview-disc';if(c===hoverCol&&!roundOver&&!champOver&&!animating&&B[0][c]===0&&(!ONLINE||turn===MY_INDEX)){
+  var colorClass=ONLINE?(turn===0?'c4x-red':'c4x-yellow'):(turn===1?'c4x-red':'c4x-yellow');
+  el.classList.add(colorClass,'show');
+}}}
+function buildOverlay(){var h='';for(var c=0;c<7;c++)h+='<button class="c4x-col" data-col="'+c+'" aria-label="Columna '+(c+1)+'"></button>';overlay.innerHTML=h;overlay.querySelectorAll('.c4x-col').forEach(function(btn){var c=+btn.dataset.col;btn.addEventListener('mouseenter',function(){hoverCol=c;updatePreview();});btn.addEventListener('mouseleave',function(){hoverCol=-1;updatePreview();});btn.addEventListener('focus',function(){hoverCol=c;updatePreview();});btn.addEventListener('click',function(){humanMove(c);});});}
+
+function winningCellsFor(p){
+ var dirs=[[1,0],[0,1],[1,1],[1,-1]];
+ for(var r=0;r<6;r++)for(var c=0;c<7;c++){
+   if(B[r][c]!==p)continue;
+   for(var d=0;d<dirs.length;d++){
+     var cells=[],dr=dirs[d][0],dc=dirs[d][1];
+     for(var k=0;k<4;k++){
+       var rr=r+dr*k,cc=c+dc*k;
+       if(rr<0||rr>=6||cc<0||cc>=7||B[rr][cc]!==p){cells=[];break;}
+       cells.push(rr+'-'+cc);
+     }
+     if(cells.length===4)return cells;
+   }
+ }
+ return [];
+}
+function launchConfetti(){
+ var colors=['#ffd42a','#ff4055','#4dd8ff','#6cff85','#b36cff','#ffffff'];
+ for(var i=0;i<55;i++){
+   var e=document.createElement('i');e.className='c4x-confetti';
+   e.style.left=(8+Math.random()*84)+'vw';
+   e.style.background=colors[i%colors.length];
+   e.style.setProperty('--dx',((Math.random()-.5)*220)+'px');
+   e.style.setProperty('--rot',(360+Math.random()*720)+'deg');
+   e.style.animationDelay=(Math.random()*.35)+'s';
+   document.body.appendChild(e);setTimeout(function(x){x.remove();},2400,e);
+ }
+}
+function showTournamentResult(){
+ if(!TOURNAMENT_MODE)return;
+ setTimeout(function(){
+   fetch('/api/torneos/'+TOURNAMENT_ID+'/estado',{cache:'no-store'})
+     .then(function(r){return r.json();})
+     .then(function(d){
+       if(!d||!d.ok)return;
+       var current=d.games.find(function(g){return g.game==='conecta4_deluxe';});
+       if(!current||!current.finished)return;
+       var winnerName=current.winner_id===d.creator_id?d.creator_name:d.opponent_name;
+       document.getElementById('tournamentResultTitle').textContent='🏆 '+winnerName+' gana Conecta 4';
+       document.getElementById('tournamentResultText').textContent='Serie finalizada '+current.creator_wins+' - '+current.opponent_wins+'.';
+       var next=d.games.find(function(g){return g.orden>current.orden&&!g.finished;});
+       var nb=document.getElementById('tournamentNextBtn');
+       var eb=document.getElementById('tournamentEndBtn');
+       eb.href='/torneos/'+TOURNAMENT_ID;
+       if(next){
+         nb.style.display='grid';
+         nb.textContent='SIGUIENTE: '+next.icon+' '+next.name.toUpperCase();
+         nb.href='/torneos/'+TOURNAMENT_ID;
+         eb.textContent='VER TORNEO';
+       }else{
+         nb.style.display='none';
+         eb.textContent=d.status==='finalizado'?'VER RESULTADO FINAL':'VOLVER AL TORNEO';
+       }
+       document.getElementById('roundModal').classList.add('hidden');
+       document.getElementById('tournamentResultModal').classList.remove('hidden');
+     }).catch(function(){});
+ },850);
+}
+
+function renderBoard(dropInfo){var h='';for(var r=0;r<6;r++)for(var c=0;c<7;c++){var p=B[r][c];h+='<div class="c4x-slot">';if(p){
+ var extra=dropInfo&&dropInfo.r===r&&dropInfo.c===c?' c4x-drop':'';
+ var wins=(roundOver&&winnerVisual)?winningCellsFor(winnerVisual):[];
+ var winClass=wins.indexOf(r+'-'+c)>=0?' c4x-winning':'';
+ var dist=((r+1)*72)+'px';
+ h+='<div class="c4x-disc '+discClass(p)+extra+winClass+'" style="--drop-distance:'+dist+'"></div>';
+}h+='</div>';}board.innerHTML=h;
+if(ONLINE){
+ var who=PLAYERS[turn]?PLAYERS[turn].name:'Jugador';
+ turnEl.textContent=(turn===MY_INDEX?'TU TURNO':'TURNO DE '+who)+' · '+(turn===0?'🔴':'🟡');
+}else{
+ turnEl.textContent=turn===1?'TU TURNO · 🔴':'TURNO CPU · 🟡';
+}
+document.getElementById('myWins').textContent=myWins;
+document.getElementById('cpuWins').textContent=cpuWins;
+updatePreview();}
+function renderTrays(){function trayHTML(color,used){var h='';for(var i=0;i<21;i++){var rot=((i*37)%31)-15;h+='<i class="c4x-mini '+color+(i<used?' used':'')+'" style="--rot:'+rot+'deg"></i>';}return h;}document.getElementById('redTray').innerHTML=trayHTML('c4x-red',usedRed);document.getElementById('yellowTray').innerHTML=trayHTML('c4x-yellow',usedYellow);}
+function availableRow(col){for(var r=5;r>=0;r--)if(!B[r][col])return r;return -1;}
+function checkWin(r,c,p){var ds=[[1,0],[0,1],[1,1],[1,-1]];for(var k=0;k<ds.length;k++){var d=ds[k],n=1;for(var si=0;si<2;si++){var s=si===0?-1:1,rr=r+d[0]*s,cc=c+d[1]*s;while(rr>=0&&rr<6&&cc>=0&&cc<7&&B[rr][cc]===p){n++;rr+=d[0]*s;cc+=d[1]*s;}}if(n>=4)return true;}return false;}
+function boardFull(){return B[0].every(function(x){return x!==0;});}
+function place(col,p,cb){var r=availableRow(col);if(r<0)return false;animating=true;hoverCol=col;B[r][col]=p;if(p===1)usedRed++;else usedYellow++;renderTrays();renderBoard({r:r,c:col});var duration=Math.min(.95,.48+(r+1)*.075);setTimeout(function(){playDropSound();animating=false;renderBoard();if(cb)cb(r);},duration*1000+45);return true;}
+function finishRound(winner){
+ roundOver=true;winnerVisual=winner;playApplause();if(winner)launchConfetti();
+ var key=(ROOM||'cpu_conecta4')+'_r'+localRoundNo;
+ progressResult(key,winner===1,true);
+ var title,text,icon;if(winner===1){myWins++;title='¡Has ganado la partida!';icon='🔴🏆';}else if(winner===2){cpuWins++;title='CPU gana la partida';icon='🟡🏆';}else{title='Partida empatada';icon='🤝';}
+ document.getElementById('myWins').textContent=myWins;document.getElementById('cpuWins').textContent=cpuWins;
+ var champion=myWins>=target?1:(cpuWins>=target?2:0);if(champion){champOver=true;text=champion===1?'🎉 ¡ERES CAMPEÓN! Marcador final '+myWins+' - '+cpuWins:'🤖 CPU es campeona. Marcador final '+myWins+' - '+cpuWins;document.getElementById('nextRound').textContent='NUEVO CAMPEONATO';}else{text='Marcador del campeonato: '+myWins+' - '+cpuWins+'.';document.getElementById('nextRound').textContent='SIGUIENTE PARTIDA';}
+ document.getElementById('roundIcon').textContent=icon;document.getElementById('roundTitle').textContent=title;document.getElementById('roundText').textContent=text;setTimeout(function(){document.getElementById('roundModal').classList.remove('hidden');},550);renderBoard();}
+function afterMove(r,c,p){if(checkWin(r,c,p)){msg.textContent=p===1?'🏆 ¡Conecta 4! Ganas esta partida.':'🤖 CPU conecta 4.';finishRound(p);return true;}if(boardFull()){msg.textContent='🤝 Tablero completo. Empate.';finishRound(0);return true;}return false;}
+function humanMove(c){if(ONLINE){
+ if(roundOver||champOver||animating||turn!==MY_INDEX)return;
+ animating=true;
+ fetch('/api/conecta4/'+ROOM+'/move',{
+   method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({col:c})
+ }).then(function(r){return r.json();}).then(function(resp){
+   animating=false;
+   if(resp&&resp.state)applyOnlineState(resp.state);
+ }).catch(function(){animating=false;msg.textContent='Error enviando jugada.';});
+ return;
+}if(turn!==1||roundOver||champOver||animating)return;if(B[0][c]!==0){msg.textContent='Esa columna está llena.';return;}place(c,1,function(r){if(afterMove(r,c,1))return;turn=2;msg.textContent='CPU está pensando…';renderBoard();setTimeout(cpuMove,520);});}
+function cpuMove(){if(roundOver||champOver)return;var cols=[0,1,2,3,4,5,6].filter(function(c){return B[0][c]===0;});if(!cols.length){finishRound(0);return;}var c=smartCpu(cols);hoverCol=c;updatePreview();setTimeout(function(){place(c,2,function(r){if(afterMove(r,c,2))return;turn=1;hoverCol=-1;msg.textContent='Tu turno. Elige una columna.';renderBoard();});},250);}
+function smartCpu(cols){function winningMove(p){for(var i=0;i<cols.length;i++){var c=cols[i],r=availableRow(c);B[r][c]=p;var w=checkWin(r,c,p);B[r][c]=0;if(w)return c;}return -1;}var w=winningMove(2);if(w>=0)return w;var block=winningMove(1);if(block>=0)return block;var pref=[3,2,4,1,5,0,6].filter(function(c){return cols.indexOf(c)>=0;});return pref[Math.floor(Math.random()*Math.min(3,pref.length))];}
+function announceStarter(starter,reason){
+ var name;
+ if(ONLINE){
+   name=(PLAYERS[starter]&&PLAYERS[starter].name)||'Jugador';
+ }else{
+   name=starter===1?'TÚ':'CPU';
+ }
+ msg.textContent=(reason==='draw'?'🎲 Sorteo inicial: ':'🔄 Alternancia: ')+'comienza '+name+' · '+(ONLINE?(starter===0?'🔴':'🟡'):(starter===1?'🔴':'🟡'));
+}
+
+function startRound(){
+ B=emptyBoard();roundOver=false;champOver=false;usedRed=0;usedYellow=0;hoverCol=-1;animating=false;winnerVisual=0;
+ progressResultKey='';
+ localRoundNo++;
+ var first=localStarter===null;
+ if(first)localStarter=Math.random()<.5?1:2;
+ else localStarter=localStarter===1?2:1;
+ turn=localStarter;
+ var key=(ROOM||'cpu_conecta4')+'_r'+localRoundNo;
+ progressPlay(key);
+ renderTrays();renderBoard();
+ announceStarter(turn,first?'draw':'alternate');
+ if(turn===2)setTimeout(cpuMove,900);
+}
+function startChampionship(){
+ target=Math.max(1,Math.min(9,+document.getElementById('winsPick').textContent||1));
+
+ if(ONLINE){
+   if(!IS_HOST)return;
+   var btn=document.getElementById('startChamp');
+   btn.disabled=true;
+   btn.textContent='INICIANDO…';
+   msg.textContent='Preparando campeonato a '+target+(target===1?' victoria…':' victorias…');
+
+   fetch('/api/conecta4/'+ROOM+'/configure',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({target:target})
+   })
+   .then(function(r){return r.json();})
+   .then(function(resp){
+      if(!resp || !resp.ok)throw new Error('configure');
+      applyOnlineState(resp.state);
+      btn.disabled=false;
+      btn.textContent='EMPEZAR CAMPEONATO';
+   })
+   .catch(function(){
+      btn.disabled=false;
+      btn.textContent='EMPEZAR CAMPEONATO';
+      msg.textContent='No se pudo iniciar. Pulsa de nuevo.';
+   });
+   return;
+ }
+
+ // MODO CPU
+ myWins=0;
+ cpuWins=0;
+ document.getElementById('targetWins').textContent=target;
+ document.getElementById('champInfo').textContent='Campeón: primero en ganar '+target+(target===1?' partida.':' partidas.');
+ document.getElementById('setupModal').classList.add('hidden');
+ document.getElementById('waitHostModal').classList.add('hidden');
+ startRound();
+}
+
+document.getElementById('lessWins').onclick=function(){var el=document.getElementById('winsPick');el.textContent=Math.max(1,+el.textContent-1);};
+document.getElementById('moreWins').onclick=function(){var el=document.getElementById('winsPick');el.textContent=Math.min(9,+el.textContent+1);};
+document.getElementById('startChamp').onclick=startChampionship;
+document.getElementById('nextRound').onclick=function(){
+ document.getElementById('roundModal').classList.add('hidden');
+ if(ONLINE){
+   if(TOURNAMENT_MODE && champOver){showTournamentResult();return;}
+   if(IS_HOST){
+     fetch('/api/conecta4/'+ROOM+'/next',{method:'POST'})
+       .then(function(r){return r.json();})
+       .then(function(resp){if(resp&&resp.state)applyOnlineState(resp.state);});
+   }
+   return;
+ }
+ if(champOver){document.getElementById('setupModal').classList.remove('hidden');}else startRound();
+};
+
+
+
+var lastStateSignature='';
+function pollOnlineState(){
+ if(!ONLINE)return;
+ fetch('/api/conecta4/'+ROOM+'/state',{cache:'no-store'})
+   .then(function(r){return r.json();})
+   .then(function(resp){
+      if(!resp||!resp.ok||!resp.state)return;
+      var st=resp.state;
+      var sig=JSON.stringify([st.board,st.turn,st.target,st.wins,st.round_over,st.champ_over,st.configured,st.round_no]);
+      if(sig!==lastStateSignature){
+         lastStateSignature=sig;
+         applyOnlineState(st);
+      }
+   }).catch(function(){});
+}
+
+function applyOnlineState(st){
+ var old=B?JSON.stringify(B):'';
+ var last=st.last_move||null;
+ B=st.board; hoverCol=-1; target=st.target||1; myWins=st.wins[0]||0; cpuWins=st.wins[1]||0;
+ var onlineRoundKey=ROOM+'_r'+(st.round_no||1);
+ if(st.configured)progressPlay(onlineRoundKey);
+ if(st.configured && (!stateStarterRound || stateStarterRound!==st.round_no)){
+   stateStarterRound=st.round_no;
+   setTimeout(function(){announceStarter(st.starter,st.starter_reason||'draw');},80);
+ }
+ roundOver=!!st.round_over;champOver=!!st.champ_over;turn=st.turn||0;winnerVisual=st.winner||0;
+ document.getElementById('targetWins').textContent=target;
+ document.getElementById('myWins').textContent=myWins;document.getElementById('cpuWins').textContent=cpuWins;
+ if(st.players&&st.players.length){
+  document.getElementById('p1Name').textContent=st.players[0].name;
+  document.getElementById('p2Name').textContent=st.players[1]?st.players[1].name:'Esperando…';
+  document.getElementById('trayP1').textContent=st.players[0].name.toUpperCase();
+  document.getElementById('trayP2').textContent=(st.players[1]?st.players[1].name:'Esperando').toUpperCase();
+ }
+ document.getElementById('champInfo').textContent='Campeón: primero en ganar '+target+(target===1?' partida.':' partidas.');
+ var setup=document.getElementById('setupModal'), wait=document.getElementById('waitHostModal');
+ if(st.configured){
+   setup.classList.add('hidden');
+   wait.classList.add('hidden');
+ }else if(IS_HOST){
+   wait.classList.add('hidden');
+   setup.classList.remove('hidden');
+   msg.textContent='Elige cuántas partidas hay que ganar.';
+ }else{
+   setup.classList.add('hidden');
+   wait.classList.remove('hidden');
+   msg.textContent='Esperando a que el anfitrión configure el campeonato…';
+ }
+ usedRed=0;usedYellow=0;
+ for(var rr=0;rr<6;rr++)for(var cc=0;cc<7;cc++){if(B[rr][cc]===1)usedRed++;else if(B[rr][cc]===2)usedYellow++;}
+ renderTrays();
+ if(last && old!==JSON.stringify(B)){
+   animating=true;renderBoard(last);setTimeout(function(){playDropSound();animating=false;renderBoard();},830);
+ }else renderBoard();
+ turnEl.textContent=(turn===MY_INDEX?'TU TURNO · ':'TURNO DE ')+(turn===0?'🔴':'🟡');
+ if(roundOver){
+   var winner=st.winner;
+   progressResult(ROOM+'_r'+(st.round_no||1), winner>0 && (winner-1)===MY_INDEX, false);
+   var title=winner===0?'Partida empatada':((winner-1)===MY_INDEX?'¡Has ganado la partida!':(st.players[winner-1].name+' gana la partida'));
+   document.getElementById('roundTitle').textContent=title;
+   document.getElementById('roundIcon').textContent=winner===0?'🤝':'🏆';
+   document.getElementById('roundText').textContent=champOver?(winner-1===MY_INDEX?'🎉 ¡ERES CAMPEÓN!':'🏆 '+st.players[winner-1].name+' es campeón/a'):'Marcador: '+myWins+' - '+cpuWins;
+   document.getElementById('nextRound').textContent=champOver?'NUEVO CAMPEONATO':'SIGUIENTE PARTIDA';
+   if(!document.getElementById('roundModal').classList.contains('shownOnce')){
+      playApplause();
+      if(winner)launchConfetti();
+      document.getElementById('roundModal').classList.add('shownOnce');
+   }
+   if(TOURNAMENT_MODE && champOver){
+      showTournamentResult();
+   }else{
+      setTimeout(function(){document.getElementById('roundModal').classList.remove('hidden');},450);
+   }
+ }else{
+   document.getElementById('roundModal').classList.add('hidden');
+   document.getElementById('roundModal').classList.remove('shownOnce');
+   msg.textContent=(turn===MY_INDEX?'Tu turno. Elige una columna.':'Esperando la jugada del rival…');
+ }
+}
+buildPreview();buildOverlay();B=emptyBoard();renderTrays();renderBoard();
+if(!ONLINE){
+ document.getElementById('trayP1').textContent='TÚ';
+ document.getElementById('trayP2').textContent='CPU';
+}
+if(ONLINE){
+ document.getElementById('p1Name').textContent=PLAYERS[0].name;
+ document.getElementById('p2Name').textContent=PLAYERS[1].name;
+ document.getElementById('trayP1').textContent=PLAYERS[0].name.toUpperCase();
+ document.getElementById('trayP2').textContent=PLAYERS[1].name.toUpperCase();
+ if(TOURNAMENT_MODE){
+   document.getElementById('setupModal').classList.add('hidden');
+   document.getElementById('waitHostModal').classList.add('hidden');
+ }else if(IS_HOST){
+   document.getElementById('setupModal').classList.remove('hidden');
+   document.getElementById('waitHostModal').classList.add('hidden');
+ }else{
+   document.getElementById('setupModal').classList.add('hidden');
+   document.getElementById('waitHostModal').classList.remove('hidden');
+ }
+ sock.on('connect',function(){
+   msg.textContent=IS_HOST?'Elige cuántas partidas hay que ganar.':'Esperando a que el anfitrión configure el campeonato…';
+   sock.emit('c4_game_join',{code:ROOM});
+ });
+ sock.on('connect_error',function(){
+   msg.textContent='No se pudo conectar la partida. Reintentando…';
+ });
+ sock.on('c4_state',function(st){lastStateSignature='';applyOnlineState(st);});
+ pollOnlineState();
+ setInterval(pollOnlineState,500);
+}
+
+})();
+</script>
+{% endblock %}

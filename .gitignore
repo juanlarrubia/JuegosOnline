@@ -1,0 +1,11 @@
+﻿.idea/
+__pycache__/
+*.pyc
+usuarios.db
+android_app/.gradle/
+android_app/build/
+android_app/.idea/
+
+android_app/**/build/
+android_app/**/.gradle/
+

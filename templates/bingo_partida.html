@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% block title %}Bingo 90 Deluxe{% endblock %}
+{% block content %}
+<div class="bingo-game-shell">
+  <header class="bingo-topbar">
+    <div class="bingo-brand"><span>🎱</span><div><small>BINGO 90 DELUXE</small><strong>SALA {{ codigo }}</strong></div></div>
+    <div class="draw-counter">
+      <small>BOLAS EN EL BOMBO</small>
+      <strong><span id="ballsRemaining">90</span> / 90</strong>
+      <em id="drawnMini">0 extraídas</em>
+    </div>
+    {% if user.id == sala.host_id %}
+    <div class="host-bingo-controls">
+      <label>VELOCIDAD <strong id="speedText">{{ sala.speed|round(1) }}s</strong></label>
+      <input id="speedRange" type="range" min="1" max="10" step="0.5" value="{{ sala.speed }}">
+      <button id="pauseBtn" onclick="togglePause()">⏸ PAUSAR</button>
+    </div>
+    {% endif %}
+  </header>
+
+  <main class="bingo-layout bingo-layout-v6">
+    <section class="bingo-machine-panel">
+      <div class="machine-stage real-machine">
+        <div class="machine-globe" id="machineGlobe">
+          {% for i in range(18) %}
+          <span class="bombo-ball b{{ i+1 }}">{{ ((i*7+3)%90)+1 }}</span>
+          {% endfor %}
+          <div class="machine-core"><span id="coreRemaining">90</span><small>QUEDAN</small></div>
+        </div>
+        <div class="ball-chute">
+          <div id="currentBall" class="current-ball waiting">?</div>
+        </div>
+        <div class="last-number-label">ÚLTIMA BOLA</div>
+      </div>
+
+      <div class="card recent-panel">
+        <div class="panel-head">
+          <div><span class="eyebrow">ÚLTIMAS BOLAS</span><h3>Las 6 más recientes</h3></div>
+          <button class="all-balls-button" onclick="openAllBalls()">VER 1–90</button>
+        </div>
+        <div id="recentBalls" class="recent-balls recent-six"></div>
+      </div>
+    </section>
+
+    <section class="ticket-zone">
+      <div class="score-banner">
+        <div><small>TU PUNTUACIÓN</small><strong id="myScore">0</strong><span>pts</span></div>
+        <div class="rank-mini"><small>POSICIÓN</small><strong id="myRank">#1</strong></div>
+      </div>
+
+      <div class="card my-ticket-card">
+        <div class="ticket-title">
+          <div><span class="eyebrow">TUS CARTONES</span><h2>{{ user.display_name or user.username }}</h2></div>
+          <span class="ticket-badge"><span id="ticketCountLabel">1</span> CARTÓN/ES</span>
+        </div>
+        <div id="ticketsContainer" class="tickets-container"></div>
+        <p class="ticket-help">Pulsa manualmente un número cuando haya salido. Puedes pulsarlo otra vez para desmarcarlo.</p>
+      </div>
+
+      <div class="claim-panel card">
+        <div>
+          <span class="eyebrow">COMPROBAR OBJETIVO</span>
+          <h3>¿Has conseguido algún premio?</h3>
+          <p>La app comprobará tus cartones. Si pulsas sin tener ningún objetivo nuevo, el botón se bloqueará durante 10 segundos.</p>
+        </div>
+        <button id="checkBtn" class="check-objective-btn" onclick="checkObjectives()">🏆 COMPROBAR</button>
+        <div id="checkPenalty" class="check-penalty"></div>
+      </div>
+
+      <div class="card prizes-live">
+        <div class="panel-head"><div><span class="eyebrow">PREMIOS</span><h3>Objetivos de la partida</h3></div></div>
+        <div id="prizeList" class="prize-list"></div>
+      </div>
+    </section>
+
+    <aside class="card leaderboard-panel">
+      <div class="panel-head"><div><span class="eyebrow">EN DIRECTO</span><h3>Clasificación</h3></div></div>
+      <div id="leaderboard"></div>
+    </aside>
+  </main>
+</div>
+
+<div id="allBallsModal" class="balls-modal hidden">
+  <div class="balls-modal-card">
+    <div class="balls-modal-head"><div><span class="eyebrow">TABLERO DE BOLAS</span><h2>Bolas 1–90</h2></div><button onclick="closeAllBalls()">×</button></div>
+    <p>Las bolas extraídas aparecen iluminadas.</p>
+    <div id="allBallsGrid" class="all-balls-grid"></div>
+  </div>
+</div>
+
+
+<div id="bingoVerify" class="bingo-verify hidden">
+  <div class="bingo-verify-card">
+    <div class="verify-icon">🔎</div>
+    <span class="eyebrow">BINGO</span>
+    <h1 id="verifyTitle">Comprobando bingo…</h1>
+    <p id="verifyPlayer"></p>
+    <div id="verifyTicket" class="verify-ticket"></div>
+    <div id="verifyStatus" class="verify-status">Revisando cartón…</div>
+  </div>
+</div>
+
+<div id="prizeSplash" class="prize-splash hidden"><div><span id="prizeIcon">🏆</span><strong id="prizeName"></strong><small id="prizeWho"></small></div></div>
+
+<div id="bingoOver" class="gameover hidden">
+  <div class="gameover-card bingo-over-card">
+    <div class="trophy">🏆</div><span class="eyebrow">FIN DEL BINGO</span>
+    <h1 id="winnerText">Clasificación final</h1>
+    <p id="ballsUsed" class="muted"></p>
+    <div id="finalRanking"></div>
+    <div class="bingo-end-actions">
+      {% if user.id == sala.host_id %}
+      <button class="start-button replay" onclick="restartBingo()">🔁 REPETIR PARTIDA</button>
+      {% else %}
+      <button class="start-button replay" disabled>⏳ ESPERANDO AL ANFITRIÓN</button>
+      {% endif %}
+      <a href="{{ url_for('menu') }}" class="start-button menu-end">🏠 MENÚ PRINCIPAL</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const socket=io(), CODE="{{ codigo }}", ME={{ user.id }}, HOST={{ sala.host_id }};
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+const INITIAL={{ sala|tojson }};
+let me=(INITIAL.players.find(p=>p.id===ME)||{});
+let myTickets=me.tickets||[];
+let markedByTicket=(me.marked_by_ticket||[]).map(x=>new Set(x||[]));
+let drawn=new Set(INITIAL.drawn||[]);
+let prizeDefs=INITIAL.prize_defs||[];
+let penaltyTimer=null;
+
+socket.on("connect",()=>socket.emit("join_bingo",{code:CODE}));
+socket.on("bingo_state",state=>{
+  me=state.players.find(p=>p.id===ME)||me;
+  myTickets=me.tickets||myTickets;
+  markedByTicket=(me.marked_by_ticket||[]).map(x=>new Set(x||[]));
+  drawn=new Set(state.drawn||[]);
+  prizeDefs=state.prize_defs||prizeDefs;
+  document.getElementById("ticketCountLabel").textContent=(myTickets.length || me.selected_tickets || 1);
+  document.getElementById("ballsRemaining").textContent=90-drawn.size;
+  document.getElementById("coreRemaining").textContent=90-drawn.size;
+  document.getElementById("drawnMini").textContent=`${drawn.size} extraídas`;
+  renderTickets();renderPrizes(state.prizes||{});renderScores(state.players||[]);renderAllBalls();
+});
+socket.on("bingo_ball",d=>onBall(d));
+socket.on("bingo_mark_state",d=>{markedByTicket=(d.marked_by_ticket||[]).map(x=>new Set(x||[]));renderTickets();});
+socket.on("bingo_prize_awarded",d=>{renderScores(d.players);renderPrizes(d.prizes||{});if(d.new_prizes?.length)showPrizeQueue(d.new_prizes);});
+socket.on("bingo_announcement",d=>announcePrize(d));
+socket.on("bingo_verify_start",d=>startBingoVerification(d));
+socket.on("bingo_verify_result",d=>finishBingoVerification(d));
+socket.on("bingo_check_result",d=>{
+  if(d.ok){if(d.new_prizes?.length)showPrizeQueue(d.new_prizes);}
+  else startPenalty(10);
+});
+socket.on("bingo_check_penalty",d=>startPenalty(Math.ceil(d.remaining||10)));
+socket.on("bingo_speed",d=>{const e=document.getElementById("speedText");if(e)e.textContent=d.speed.toFixed(1)+"s"});
+socket.on("bingo_pause",d=>{const b=document.getElementById("pauseBtn");if(b)b.textContent=d.paused?"▶ REANUDAR":"⏸ PAUSAR"});
+socket.on("bingo_over",showGameOver);
+socket.on("bingo_restart_lobby",d=>{location.href="/sala_bingo/"+d.code;});
+socket.on("app_error",d=>showToast(d.message));
+
+function renderTickets(){
+  const box=document.getElementById("ticketsContainer");
+  if(!myTickets || !myTickets.length){
+    box.innerHTML='<div class="ticket-loading">⏳ Cargando tus cartones…</div>';
+    return;
+  }
+  document.getElementById("ticketCountLabel").textContent=myTickets.length;
+  box.innerHTML=myTickets.map((ticket,idx)=>`
+    <div class="ticket-wrapper">
+      <div class="ticket-number">CARTÓN ${idx+1}</div>
+      <div class="spanish-ticket">
+        ${ticket.map(row=>row.map(n=>{
+          if(n===null)return `<div class="ticket-cell blank"><span class="blank-bingo">B</span></div>`;
+          const isMarked=(markedByTicket[idx]||new Set()).has(n);
+          return `<button class="ticket-cell ${isMarked?'marked':''}"
+                    onclick="toggleMark(${idx},${n})">
+                    <span>${n}</span><i>✓</i>
+                  </button>`;
+        }).join("")).join("")}
+      </div>
+    </div>`).join("");
+}
+function toggleMark(ticketIndex,n){socket.emit("bingo_toggle_mark",{code:CODE,ticket_index:ticketIndex,number:n});}
+function onBall(d){
+  drawn.add(d.number);
+  document.getElementById("ballsRemaining").textContent=d.remaining;
+  document.getElementById("coreRemaining").textContent=d.remaining;
+  document.getElementById("drawnMini").textContent=`${d.drawn.length} extraídas`;
+  const ball=document.getElementById("currentBall");
+  ball.className="current-ball pop";ball.textContent=d.number;
+  setTimeout(()=>ball.classList.remove("pop"),700);
+  renderTickets();renderRecent(d.drawn);renderAllBalls();renderScores(d.players);renderPrizes(d.prizes||{});
+  pulseBombo();playBallSound();speakNumber(d.number);
+}
+function renderRecent(arr){
+  document.getElementById("recentBalls").innerHTML=[...arr].reverse().slice(0,6).map((n,i)=>`<span class="${i===0?'latest':''}">${n}</span>`).join("");
+}
+function renderAllBalls(){
+  document.getElementById("allBallsGrid").innerHTML=Array.from({length:90},(_,i)=>i+1).map(n=>`<span class="${drawn.has(n)?'drawn':''}">${n}</span>`).join("");
+}
+function openAllBalls(){document.getElementById("allBallsModal").classList.remove("hidden");renderAllBalls();}
+function closeAllBalls(){document.getElementById("allBallsModal").classList.add("hidden");}
+function checkObjectives(){socket.emit("bingo_check_objectives",{code:CODE});}
+function startPenalty(sec){
+  clearInterval(penaltyTimer);
+  let left=sec;const btn=document.getElementById("checkBtn"),txt=document.getElementById("checkPenalty");
+  btn.disabled=true;
+  const tick=()=>{txt.textContent=`Penalización: espera ${left}s`;btn.textContent=`⏳ ${left}s`;left--;if(left<0){clearInterval(penaltyTimer);btn.disabled=false;btn.textContent="🏆 COMPROBAR";txt.textContent="";}};
+  tick();penaltyTimer=setInterval(tick,1000);
+}
+function renderScores(players){
+  const s=[...players].sort((a,b)=>b.score-a.score);
+  document.getElementById("leaderboard").innerHTML=s.map((p,i)=>`
+    <div class="bingo-rank-row ${p.id===ME?'me':''}">
+      <b>${i+1}</b><span class="rank-avatar">${p.bot&&!p.fake_user?'🤖':p.name[0].toUpperCase()}</span>
+      <div><strong>${p.name} <span class="stars-mini">⭐ ${p.stars||0}</span></strong><small>${p.bot&&!p.fake_user?'CPU':p.fake_user?'Rival online':'Jugador'}</small></div><em>${p.score} pts</em>
+    </div>`).join("");
+  const mine=s.find(p=>p.id===ME);document.getElementById("myScore").textContent=(mine?.score||0).toLocaleString();
+  document.getElementById("myRank").textContent="#"+(s.findIndex(p=>p.id===ME)+1);
+}
+function renderPrizes(prizes){
+  document.getElementById("prizeList").innerHTML=prizeDefs.map(p=>{
+    const won=prizes[p.key];
+    return `<div class="prize-row ${won?'won':''}">
+      <span>${p.icon}</span><div><strong>${p.name}</strong><small>${won?'CONSEGUIDO':'Disponible'}</small></div>
+      <em>+${p.points}</em>${won?'<b>✓</b>':''}</div>`;
+  }).join("");
+}
+
+let speechUnlocked=false;
+function unlockSpeech(){
+  if(speechUnlocked)return;
+  speechUnlocked=true;
+  try{
+    if("speechSynthesis" in window){
+      const u=new SpeechSynthesisUtterance(" ");
+      u.volume=0.01;u.lang="es-ES";
+      window.speechSynthesis.speak(u);
+    }
+  }catch(e){}
+}
+document.addEventListener("pointerdown",unlockSpeech,{once:true});
+document.addEventListener("touchstart",unlockSpeech,{once:true,passive:true});
+
+function speakText(text, rate=.88, pitch=1.05){
+  // APK futuro: TTS nativo Android tiene prioridad.
+  if(window.AndroidTTS && typeof window.AndroidTTS.speak==="function"){
+    try{window.AndroidTTS.speak(text);return;}catch(e){}
+  }
+  if(!("speechSynthesis" in window))return;
+  try{
+    const synth=window.speechSynthesis;
+    synth.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang="es-ES";u.rate=rate;u.pitch=pitch;u.volume=1;
+    const voices=synth.getVoices();
+    const es=voices.find(v=>String(v.lang).toLowerCase().startsWith("es"));
+    if(es)u.voice=es;
+    synth.resume();
+    synth.speak(u);
+  }catch(e){}
+}
+function announcePrize(d){
+  const items=d.items||[];
+  if(!items.length)return;
+  const first=items[0];
+  speakText(`${first.player_name}. ${first.name}. Premio conseguido`);
+}
+function startBingoVerification(d){
+  const box=document.getElementById("bingoVerify");
+  box.classList.remove("hidden");
+  document.getElementById("verifyTitle").textContent="Comprobando bingo…";
+  document.getElementById("verifyPlayer").textContent=d.player_name;
+  document.getElementById("verifyStatus").textContent="Revisando cartón…";
+
+  const myClaim=d.player_id===ME;
+  const ticket=myClaim ? (myTickets[d.ticket_index]||[]) : null;
+  const wrap=document.getElementById("verifyTicket");
+
+  if(ticket){
+    wrap.innerHTML=ticket.map(row=>row.map(n=>n===null
+      ? `<div class="verify-cell blank"><span class="blank-bingo">B</span></div>`
+      : `<div class="verify-cell" data-n="${n}">${n}</div>`).join("")).join("");
+  }else{
+    wrap.innerHTML=`<div class="verify-other-player">🎱 Comprobando el cartón de <strong>${d.player_name}</strong></div>`;
+  }
+
+  speakText("Comprobando bingo");
+
+  if(ticket){
+    const cells=d.cells||[];
+    cells.forEach((cell,i)=>{
+      setTimeout(()=>{
+        const el=wrap.querySelector(`[data-n="${cell.n}"]`);
+        if(el)el.classList.add("checking");
+        playCheckTick();
+      },350+i*240);
+      setTimeout(()=>{
+        const el=wrap.querySelector(`[data-n="${cell.n}"]`);
+        if(el){el.classList.remove("checking");el.classList.add("verified");}
+      },520+i*240);
+    });
+  }
+}
+function finishBingoVerification(d){
+  document.getElementById("verifyTitle").textContent="✅ ¡Bingo correcto!";
+  document.getElementById("verifyStatus").textContent=`Bingo correcto de ${d.player_name}`;
+  speakText(`Bingo correcto. ${d.player_name}`);
+  document.querySelectorAll(".verify-cell:not(.blank)").forEach(el=>el.classList.add("verified"));
+}
+function playCheckTick(){
+  try{
+    const C=window.AudioContext||window.webkitAudioContext,ctx=new C(),o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);o.frequency.value=780;
+    g.gain.setValueAtTime(.045,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.08);
+    o.start();o.stop(ctx.currentTime+.09);
+  }catch(e){}
+}
+
+function showPrizeQueue(items){
+  let i=0;const box=document.getElementById("prizeSplash");
+  function next(){
+    if(i>=items.length){box.classList.add("hidden");return}
+    const p=items[i++];document.getElementById("prizeIcon").textContent=p.icon;
+    document.getElementById("prizeName").textContent=p.name+"  +"+p.points+" pts";
+    document.getElementById("prizeWho").textContent=p.player_name;
+    box.classList.remove("hidden");setTimeout(next,1800);
+  } next();
+}
+function pulseBombo(){
+  document.querySelectorAll(".bombo-ball").forEach((b,i)=>{
+    b.style.animationDuration=(.8+(Math.random()*1.4))+"s";
+  });
+}
+function playBallSound(){
+  try{
+    const C=window.AudioContext||window.webkitAudioContext,ctx=new C(),o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);o.frequency.setValueAtTime(330,ctx.currentTime);o.frequency.exponentialRampToValueAtTime(780,ctx.currentTime+.16);
+    g.gain.setValueAtTime(.11,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.28);o.start();o.stop(ctx.currentTime+.29);
+  }catch(e){}
+}
+function ballCall(n){
+  const sayings={
+    1:"El uno, el galán",
+    2:"El patito",
+    5:"La mano",
+    7:"El siete de la suerte",
+    11:"Las banderillas",
+    13:"La mala suerte",
+    15:"La niña bonita",
+    22:"Los dos patitos",
+    33:"La edad de Cristo",
+    44:"Las sillas",
+    50:"Medio siglo",
+    55:"Los dos cincos",
+    66:"Las dos medias docenas",
+    69:"El sesenta y nueve",
+    77:"Las dos muletas",
+    88:"Las dos gordas",
+    90:"El abuelo"
+  };
+  if(sayings[n]) return sayings[n];
+  if(n<10) return String(n);
+  const a=Math.floor(n/10),b=n%10;
+  return `${n}. El ${a} y el ${b}`;
+}
+function speakNumber(n){
+  speakText(ballCall(n),.88,1.12);
+}
+function showToast(msg){const t=document.createElement("div");t.className="live-toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+{% if user.id == sala.host_id %}
+const speed=document.getElementById("speedRange");
+speed.addEventListener("input",()=>{document.getElementById("speedText").textContent=Number(speed.value).toFixed(1)+"s"});
+speed.addEventListener("change",()=>socket.emit("bingo_set_speed",{code:CODE,speed:Number(speed.value)}));
+function togglePause(){socket.emit("bingo_toggle_pause",{code:CODE})}
+{% else %}function togglePause(){}{% endif %}
+function restartBingo(){socket.emit("bingo_restart",{code:CODE});}
+function showGameOver(d){
+  // Ocultamos cualquier verificación abierta.
+  document.querySelectorAll(".bingo-verify-modal,.prize-splash").forEach(e=>e.remove());
+
+  let modal=document.getElementById("gameOver");
+  if(!modal){
+    modal=document.createElement("div");
+    modal.id="gameOver";
+    modal.className="gameover bingo-over";
+    document.body.appendChild(modal);
+  }
+
+  modal.classList.remove("hidden");
+  modal.style.display="grid";
+
+  const ranking=(d.players||[]).map((p,i)=>`
+    <div class="rank-row">
+      <b>#${i+1}</b>
+      <span>${p.bot?'🤖':'🎱'} ${esc(p.name)}</span>
+      <strong>${p.score} pts</strong>
+    </div>`).join("");
+
+  const isHost = ME===HOST;
+  modal.innerHTML=`
+    <div class="gameover-card bingo-over-card bingo-final-card">
+      <div class="trophy">🏆</div>
+      <span class="eyebrow">BINGO CORRECTO</span>
+      <h1>${esc(d.winner||"¡Bingo!")}</h1>
+      <p class="bingo-final-text">Partida terminada correctamente.</p>
+
+      <div class="final-ranking">${ranking}</div>
+
+      <div class="bingo-end-actions">
+        ${isHost
+          ? `<button class="start-button replay" onclick="restartBingo()">🔁 REPETIR PARTIDA</button>`
+          : `<button class="start-button replay" disabled>⏳ ESPERANDO AL ANFITRIÓN</button>`}
+        <button class="start-button menu-end" onclick="location.href='/menu'">🏠 MENÚ PRINCIPAL</button>
+      </div>
+    </div>`;
+}
+renderTickets();renderRecent(INITIAL.drawn||[]);renderPrizes(INITIAL.prizes||{});renderScores(INITIAL.players||[]);renderAllBalls();
+</script>
+
+<script>
+fetch("/api/progreso/jugada",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({game:"bingo90",code:"{{ codigo }}"})
+}).then(r=>r.json()).then(d=>{
+  if(d.new_medals&&d.new_medals.length){
+    d.new_medals.forEach(m=>{
+      const e=document.createElement("div");e.className="live-toast medal-toast";
+      e.textContent=`🏅 ${m.title} · +${m.stars} ⭐`;
+      document.body.appendChild(e);setTimeout(()=>e.remove(),3500);
+    });
+  }
+}).catch(()=>{});
+</script>
+{% endblock %}

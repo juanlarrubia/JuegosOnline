@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+{% block title %}La Oca Deluxe{% endblock %}
+{% block content %}
+<style>
+.oca-shell{width:min(980px,calc(100% - 12px));margin:6px auto 28px;color:#fff}
+.oca-head{display:flex;justify-content:space-between;align-items:center}.oca-head h1{margin:0;font-size:clamp(27px,4vw,42px)}
+.oca-hud{display:grid;grid-template-columns:1.5fr .6fr .7fr;gap:7px;margin:8px 0}
+.oca-hud>div{background:#101b31;border:1px solid #34496c;border-radius:13px;padding:9px;text-align:center;font-size:11px;font-weight:950}
+.oca-board{position:relative;width:100%;aspect-ratio:1/1;border-radius:20px;overflow:hidden;border:7px solid #654125;background:#eee;box-shadow:0 20px 55px #0009}
+.oca-board>img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.oca-pawn{
+ position:absolute;width:30px;height:30px;border-radius:50%;
+ transform:translate(-50%,-56%);z-index:20;
+ transition:left .22s ease,top .22s ease;
+ background:
+   radial-gradient(circle at 34% 28%,rgba(255,255,255,.72) 0 7%,transparent 8%),
+   radial-gradient(circle at 45% 42%,color-mix(in srgb,var(--c) 92%,white 8%) 0 58%,var(--c) 59% 78%,color-mix(in srgb,var(--c) 68%,black 32%) 79% 100%);
+ border:2px solid color-mix(in srgb,var(--c) 72%,black 28%);
+ box-shadow:inset 3px 3px 5px rgba(255,255,255,.42),inset -5px -5px 7px rgba(0,0,0,.28),0 5px 5px rgba(0,0,0,.48);
+}
+.oca-pawn:before{content:none}
+.oca-pawn:after{content:none}
+.red{--c:#ef4238}.blue{--c:#248cf1}.green{--c:#4fc64a}.purple{--c:#9851d7}
+.oca-pawn.turn{filter:drop-shadow(0 0 8px #ffd83c) drop-shadow(0 5px 3px #0008)}
+
+.oca-players{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:7px}.oca-player{background:#101b31;border:1px solid #34496c;border-radius:11px;padding:7px;font-size:10px}.oca-player.turn{outline:2px solid #ffd83c}
+.oca-controls{display:flex;justify-content:center;align-items:center;gap:18px;margin:12px 0}
+.oca-die-wrap{
+ width:112px;height:112px;display:grid;place-items:center;perspective:620px;
+ background:#fff;border-radius:18px;border:1px solid #d9d9d9;
+ box-shadow:0 10px 20px #0005,inset 0 0 0 2px #ffffff;
+}
+.oca-die{
+ width:72px;height:72px;position:relative;transform-style:preserve-3d;
+ transform:rotateX(-18deg) rotateY(28deg);transition:transform .18s ease;
+ filter:drop-shadow(0 14px 10px rgba(0,0,0,.45));
+}
+.oca-face{
+ position:absolute;inset:0;border-radius:12px;
+ background:linear-gradient(145deg,#ffffff 0%,#f7f7f7 38%,#e1e1e1 72%,#c8c8c8 100%);
+ border:1px solid #b8b8b8;
+ box-shadow:inset 5px 5px 9px #fff,inset -7px -7px 12px #969696,0 3px 6px #0004;
+ backface-visibility:hidden;
+ display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+ padding:11px;gap:4px;
+}
+.oca-front{transform:translateZ(38px)}
+.oca-back{transform:rotateY(180deg) translateZ(38px)}
+.oca-right{transform:rotateY(90deg) translateZ(38px)}
+.oca-left{transform:rotateY(-90deg) translateZ(38px)}
+.oca-top{transform:rotateX(90deg) translateZ(38px)}
+.oca-bottom{transform:rotateX(-90deg) translateZ(38px)}
+.oca-pip{
+ width:10px;height:10px;border-radius:50%;
+ background:radial-gradient(circle at 30% 28%,#666 0%,#1f1f1f 35%,#030303 72%,#000 100%);
+ box-shadow:inset 1px 1px 2px #777,inset -1px -1px 2px #000,0 1px 1px rgba(255,255,255,.55);
+ align-self:center;justify-self:center
+}
+.oca-pip.off{visibility:hidden}
+.oca-die.roll{animation:ocaDice3d 1s cubic-bezier(.18,.7,.22,1)}
+@keyframes ocaDice3d{
+ 0%{transform:rotateX(-18deg) rotateY(28deg) rotateZ(0) translateY(0)}
+ 15%{transform:rotateX(125deg) rotateY(-80deg) rotateZ(35deg) translateY(-13px) scale(1.05)}
+ 32%{transform:rotateX(245deg) rotateY(110deg) rotateZ(100deg) translateY(3px)}
+ 49%{transform:rotateX(370deg) rotateY(250deg) rotateZ(160deg) translateY(-9px) scale(1.03)}
+ 68%{transform:rotateX(505deg) rotateY(370deg) rotateZ(225deg) translateY(2px)}
+ 84%{transform:rotateX(625deg) rotateY(465deg) rotateZ(300deg) translateY(-3px)}
+ 100%{transform:rotateX(702deg) rotateY(748deg) rotateZ(360deg) translateY(0)}
+}
+.oca-roll{border:0;border-radius:14px;padding:15px 24px;font-weight:1000;font-size:15px;background:linear-gradient(90deg,#ffd43b,#59dfe8);color:#07111d}.oca-roll:disabled{opacity:.35}
+.oca-rules{background:#101b31;border:1px solid #34496c;border-radius:18px;padding:16px;margin-top:14px}.oca-rules h3{margin:0 0 8px}.oca-rules p{font-size:11px;line-height:1.45;margin:6px 0;color:#dce6f5}
+.oca-over{position:fixed;inset:0;z-index:10000;background:#020710dc;display:grid;place-items:center;padding:16px}.oca-over.hidden{display:none}.oca-over-card{width:min(420px,100%);text-align:center;background:#14233b;border:1px solid #577297;border-radius:22px;padding:24px}.oca-over-card a{display:block;margin-top:12px;padding:12px;border-radius:12px;background:linear-gradient(90deg,#ffd43b,#59dfe8);text-decoration:none;color:#07111d;font-weight:1000}
+@media(max-width:700px){
+ .oca-shell{width:100%;padding:2px;margin:0 auto 20px}
+ .oca-head{padding:0 4px}.oca-head h1{font-size:24px}.oca-head small{font-size:9px}
+ .oca-hud{grid-template-columns:1fr 1fr;gap:5px;margin:6px 2px}
+ .oca-hud>div{padding:7px 5px;font-size:9px}
+ .oca-hud>div:first-child{grid-column:1/-1;font-size:10px}
+ .oca-board{border-width:4px;border-radius:12px}
+ .oca-players{grid-template-columns:1fr 1fr;gap:5px;margin:6px 2px}
+ .oca-player{font-size:9px;padding:6px}
+ .oca-pawn{width:20px;height:20px;border-width:1px}
+ .oca-controls{gap:10px;margin:8px 0;position:sticky;bottom:4px;z-index:80;background:rgba(6,17,29,.88);padding:6px;border-radius:14px;backdrop-filter:blur(5px)}
+ .oca-die-wrap{width:82px;height:82px;border-radius:14px}
+ .oca-die{width:54px;height:54px}
+ .oca-face{padding:8px;border-radius:9px}
+ .oca-front{transform:translateZ(27px)}
+ .oca-back{transform:rotateY(180deg) translateZ(27px)}
+ .oca-right{transform:rotateY(90deg) translateZ(27px)}
+ .oca-left{transform:rotateY(-90deg) translateZ(27px)}
+ .oca-top{transform:rotateX(90deg) translateZ(27px)}
+ .oca-bottom{transform:rotateX(-90deg) translateZ(27px)}
+ .oca-pip{width:8px;height:8px}
+ .oca-roll{padding:12px 16px;font-size:13px;min-width:150px}
+ .oca-rules{margin:8px 2px 0;padding:12px;border-radius:14px}
+ .oca-rules h3{font-size:15px}.oca-rules p{font-size:10px;margin:5px 0}
+}
+
+/* V73: ajuste visual / depuración de coordenadas */
+
+.oca-player{display:flex!important;align-items:center;gap:8px;min-height:48px}
+.oca-player-chip{
+ flex:0 0 auto;width:29px;height:29px;border-radius:50%;
+ background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.75) 0 8%,transparent 9%),
+ radial-gradient(circle at 45% 42%,color-mix(in srgb,var(--c) 92%,white 8%) 0 58%,var(--c) 59% 78%,color-mix(in srgb,var(--c) 68%,black 32%) 79% 100%);
+ border:2px solid color-mix(in srgb,var(--c) 72%,black 28%);
+ box-shadow:inset 2px 2px 4px #fff6,inset -4px -4px 6px #0005,0 3px 4px #0008
+}
+.oca-player-copy{min-width:0;line-height:1.25}.oca-player-name{font-size:12px;font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oca-player-meta{opacity:.86;font-size:9px;margin-top:3px}
+.oca-special-banner{
+ position:absolute;z-index:60;left:50%;top:50%;transform:translate(-50%,-50%) scale(.88);
+ width:min(72%,520px);padding:15px 18px;border-radius:18px;text-align:center;
+ background:linear-gradient(180deg,#39200f,#160d08);border:3px solid #e7b53c;
+ color:#fff;box-shadow:0 14px 40px #000c,inset 0 0 25px #a55a172e;
+ opacity:0;pointer-events:none;transition:.22s ease
+}
+.oca-special-banner.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.oca-special-banner .ico{font-size:30px}.oca-special-banner b{display:block;color:#ffd64d;font-size:20px;margin:2px 0 4px}.oca-special-banner span{font-size:12px}
+.oca-series{
+ display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;
+ background:#101b31;border:1px solid #34496c;border-radius:13px;padding:9px 12px;margin:8px 0
+}
+.oca-series strong{font-size:11px}.oca-series button{
+ width:36px;height:32px;border-radius:9px;border:1px solid #40587c;background:#172641;color:#fff;font-weight:900;cursor:pointer
+}
+.oca-series button.active{background:#ffd83c;color:#172033;border-color:#ffe986;box-shadow:0 0 12px #ffd83c55}
+.oca-series small{opacity:.72;font-size:9px}
+@media(max-width:700px){
+ 
+ .oca-player{min-height:40px;gap:5px;padding:5px!important}.oca-player-chip{width:22px;height:22px;border-width:1px}
+ .oca-player-name{font-size:9px}.oca-player-meta{font-size:7px}
+ .oca-special-banner{width:78%;padding:10px 12px;border-width:2px}.oca-special-banner .ico{font-size:22px}.oca-special-banner b{font-size:15px}.oca-special-banner span{font-size:9px}
+ .oca-series{padding:6px;gap:5px}.oca-series strong{width:100%;text-align:center;font-size:9px}.oca-series button{width:31px;height:28px}
+}
+
+
+.oca-board{transition:transform .34s ease,transform-origin .16s ease}
+@media(max-width:700px){
+ body.oca-zooming{overflow:hidden}
+ .oca-board.oca-zoom-active{
+   transform:scale(1.72);
+   z-index:90;
+   box-shadow:0 24px 70px #000c;
+ }
+}
+
+
+#ocaFinalCelebration{
+ position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;
+ background:rgba(3,14,28,.5);backdrop-filter:blur(2px);pointer-events:none
+}
+#ocaFinalCelebration.show{display:flex;animation:ocaFinalFade .25s ease-out both}
+.oca-final-card{padding:22px 28px;border-radius:26px;text-align:center;background:linear-gradient(145deg,#fff9d9,#fff 55%,#dff8ff);border:4px solid #f5c842;box-shadow:0 18px 55px #0007;animation:ocaFinalPop .65s cubic-bezier(.2,.9,.25,1.2) both}
+.oca-final-goose{font-size:clamp(70px,16vw,145px);line-height:1;animation:ocaFinalGoose .9s ease-in-out infinite alternate}
+.oca-final-title{font-weight:1000;font-size:clamp(28px,7vw,54px);color:#15233f}
+.oca-final-sub{font-weight:900;color:#bd7411;font-size:clamp(15px,3.5vw,24px)}
+.oca-feather{position:absolute;top:-10vh;font-size:clamp(20px,5vw,40px);animation:ocaFeatherFall 2.5s linear forwards}
+@keyframes ocaFinalFade{from{opacity:0}to{opacity:1}}
+@keyframes ocaFinalPop{from{transform:scale(.35);opacity:0}70%{transform:scale(1.08)}to{transform:scale(1);opacity:1}}
+@keyframes ocaFinalGoose{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-10px) rotate(4deg)}}
+@keyframes ocaFeatherFall{to{transform:translateY(120vh) rotate(620deg);opacity:.9}}
+
+
+/* V92: el dado y los controles quedan siempre por encima del tablero ampliado */
+.oca-controls{position:relative;z-index:180}
+.oca-die-wrap{position:relative;z-index:190}
+@media(max-width:700px){
+ .oca-controls{
+   position:sticky!important;
+   bottom:4px;
+   z-index:220!important;
+ }
+ .oca-die-wrap{z-index:230!important}
+ .oca-board.oca-zoom-active{z-index:90!important}
+}
+
+</style>
+
+<div id="ocaSetup" class="oca-over">
+ <div class="oca-over-card">
+  <div style="font-size:56px">🏆</div>
+  <h2>Campeonato de La Oca</h2>
+  <p>¿Cuántas partidas hay que ganar para ser campeón?</p>
+  <div style="display:flex;justify-content:center;align-items:center;gap:14px;margin:14px 0">
+   <button id="ocaLess" type="button" style="width:44px;height:44px;border:0;border-radius:10px;font-size:24px;font-weight:900">−</button>
+   <strong id="ocaTargetPick" style="font-size:34px;min-width:45px">1</strong>
+   <button id="ocaMore" type="button" style="width:44px;height:44px;border:0;border-radius:10px;font-size:24px;font-weight:900">+</button>
+  </div>
+  <button id="ocaStartSeries" type="button" class="oca-roll" style="width:100%">EMPEZAR CAMPEONATO</button>
+  <p id="ocaWaitHost" style="display:none">⏳ Esperando a que el anfitrión elija las partidas…</p>
+ </div>
+</div>
+<div class="oca-shell">
+<header class="oca-head"><div><small>CLÁSICO · 63 CASILLAS</small><h1>🪿 La Oca Deluxe</h1></div><a class="back-link" href="{{url_for('juegos')}}">← Juegos</a></header>
+<div class="oca-hud"><div id="ocaStatus">Preparando…</div><div>🎲 Dado: <b id="ocaDiceText">—</b></div><div>🏁 Meta: <b>63</b></div></div>
+
+<div class="oca-board" id="ocaBoard">
+<img src="{{url_for('static',filename='oca/tablero_oca.jpg')}}" alt="Tablero de la Oca">
+<div id="ocaPawns"></div>
+<div id="ocaSpecialBanner" class="oca-special-banner">
+ <div class="ico" id="ocaSpecialIcon">🪿</div>
+ <b id="ocaSpecialTitle">CASILLA ESPECIAL</b>
+ <span id="ocaSpecialText"></span>
+</div>
+</div>
+<div id="ocaPlayers" class="oca-players"></div>
+<div class="oca-controls">
+ <div class="oca-die-wrap">
+  <div id="ocaDie" class="oca-die" aria-label="Dado 3D">
+   <div class="oca-face oca-front">
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+    </div>
+   <div class="oca-face oca-back">
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+    </div>
+   <div class="oca-face oca-right">
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+    </div>
+   <div class="oca-face oca-left">
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+    </div>
+   <div class="oca-face oca-top">
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+    </div>
+   <div class="oca-face oca-bottom">
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip"></i><i class="oca-pip off"></i>
+      <i class="oca-pip off"></i><i class="oca-pip off"></i><i class="oca-pip off"></i>
+    </div>
+  </div>
+ </div>
+ <button id="ocaRoll" class="oca-roll">🎲 TIRAR DADO</button>
+</div>
+
+<div class="oca-rules">
+<h3>📜 Reglas especiales</h3>
+<p><b>🪿 Ocas:</b> 5, 9, 14, 18, 23, 27, 32, 36, 41, 45, 50, 54 y 59. De oca a oca y vuelves a tirar.</p>
+<p><b>🌉 Puentes:</b> 6 y 12. Vas al otro puente y vuelves a tirar.</p>
+<p><b>🏨 Posada 19:</b> pierdes 1 turno. <b>🕳️ Pozo 31:</b> pierdes 2 turnos.</p>
+<p><b>🌀 Laberinto 42:</b> vuelves a la casilla 30. <b>🔒 Cárcel 52:</b> pierdes 2 turnos.</p>
+<p><b>🎲 Dados 26 y 53:</b> vas al otro dado y vuelves a tirar.</p>
+<p><b>💀 Muerte 58:</b> vuelves a la salida (casilla 0).</p>
+<p><b>🏁 Llegada:</b> para entrar en 63 debes sacar exacto; si te pasas, rebotas hacia atrás.</p>
+</div>
+</div>
+
+<div id="ocaOver" class="oca-over hidden"><div class="oca-over-card"><div style="font-size:62px">🏆</div><h2 id="ocaOverTitle">Partida terminada</h2><p id="ocaOverText"></p><a href="{{url_for('juegos')}}">VOLVER A JUEGOS</a></div></div>
+
+<div id="ocaFinalCelebration">
+ <div class="oca-final-card">
+  <div class="oca-final-goose">🪿</div>
+  <div class="oca-final-title">¡OCA!</div>
+  <div id="ocaFinalWinner" class="oca-final-sub">¡Victoria!</div>
+ </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+(function(){
+const CODE={{codigo|tojson}},ME={{user.id|tojson}},socket=io();
+const S={
+ dice:new Audio("{{url_for('static',filename='audio/oca_dice.wav')}}"),
+ move:new Audio("{{url_for('static',filename='audio/oca_move.wav')}}"),
+ goose:new Audio("{{url_for('static',filename='audio/oca_goose.wav')}}"),
+ bridge:new Audio("{{url_for('static',filename='audio/oca_bridge.wav')}}"),
+ inn:new Audio("{{url_for('static',filename='audio/oca_inn.wav')}}"),
+ well:new Audio("{{url_for('static',filename='audio/oca_well.wav')}}"),
+ labyrinth:new Audio("{{url_for('static',filename='audio/oca_labyrinth.wav')}}"),
+ prison:new Audio("{{url_for('static',filename='audio/oca_prison.wav')}}"),
+ diceSpecial:new Audio("{{url_for('static',filename='audio/oca_dice_special.wav')}}"),
+ death:new Audio("{{url_for('static',filename='audio/oca_death.wav')}}"),
+ win:new Audio("{{url_for('static',filename='audio/oca_win.wav')}}")
+};
+let state=null,lastSeq=0,moving=false,queued=null,progressPlay=false,progressResult=false,pendingFinal=false,nextRoundTimer=null;
+setTimeout(()=>setOcaDiceFaces(1),0);
+function sound(a){try{a.currentTime=0;a.volume=.82;a.play().catch(()=>{})}catch(e){}}
+
+// Coordenadas aproximadas del recorrido del tablero aportado, en espiral desde la casilla 1.
+// Se han marcado los centros visuales de las 63 casillas principales.
+const PTS=[[7.0,95.0],[36.2,95.0],[44.9,95.0],[52.3,95.0],[59.7,95.0],[66.8,95.0],[75.0,94.2],[84.0,93.8],[91.0,87.9],[91.5,79.0],[91.5,71.0],[91.5,63.0],[91.5,55.0],[91.5,47.0],[91.5,40.8],[91.5,32.8],[91.5,24.8],[91.5,16.8],[85.7,10.8],[77.8,9.6],[69.7,9.6],[61.7,9.6],[53.7,9.6],[45.7,9.6],[37.7,9.6],[29.7,9.6],[21.5,10.8],[15.4,8.8],[10.0,15.8],[8.3,22.8],[8.3,31.8],[8.3,40.8],[8.3,47.3],[8.3,56.3],[8.3,64.1],[10.1,73.1],[16.0,80.0],[24.1,79.5],[32.2,79.3],[40.4,79.2],[48.6,79.0],[56.6,77.8],[64.8,76.2],[71.6,73.9],[80.4,70.8],[80.7,62.7],[80.8,54.3],[77.8,46.0],[73.8,37.7],[70.8,32.1],[67.4,25.0],[60.1,21.2],[52.1,20.0],[43.6,22.4],[37.9,27.7],[30.8,29.3],[27.4,33.0],[28.4,42.2],[29.9,46.5],[29.8,54.4],[30.4,65.6],[40.5,65.5],[53.4,64.0]];
+const CELL={0:[4.2,98.0]};PTS.forEach((p,i)=>CELL[i+1]=p);
+
+
+
+
+const OCA_SPECIAL_COPY={
+ goose:['🪿','¡DE OCA A OCA!','Avanzas hasta la siguiente Oca y vuelves a tirar.'],
+ bridge:['🌉','¡DE PUENTE A PUENTE!','Te mueves al otro puente y vuelves a tirar.'],
+ inn:['🛏️','¡POSADA!','Pierdes 1 turno de descanso.'],
+ well:['🕳️','¡HAS CAÍDO EN EL POZO!','Quedas penalizado según las reglas de la partida.'],
+ labyrinth:['🌀','¡LABERINTO!','Retrocedes obligatoriamente a la casilla 30.'],
+ prison:['⛓️','¡CÁRCEL!','Pierdes 2 turnos de castigo.'],
+ dice:['🎲','¡DE DADO A DADO!','Te mueves a la otra casilla de dados y vuelves a tirar.'],
+ death:['💀','¡LA MUERTE!','Vuelves a empezar desde la salida, casilla 0.']
+};
+let ocaBannerTimer=null;
+function showOcaSpecial(kind){
+ const c=OCA_SPECIAL_COPY[kind]; if(!c)return;
+ ocaSpecialIcon.textContent=c[0];ocaSpecialTitle.textContent=c[1];ocaSpecialText.textContent=c[2];
+ ocaSpecialBanner.classList.add('show');clearTimeout(ocaBannerTimer);
+ ocaBannerTimer=setTimeout(()=>ocaSpecialBanner.classList.remove('show'),2200);
+}
+let ocaSeriesWins=1;
+document.querySelectorAll('#ocaSeries button').forEach(b=>b.onclick=()=>{
+ ocaSeriesWins=Number(b.dataset.wins)||1;
+ document.querySelectorAll('#ocaSeries button').forEach(x=>x.classList.toggle('active',x===b));
+});
+
+
+
+
+
+function render(){
+ const samePos={};
+ ocaPawns.innerHTML=state.players.map((p,i)=>{
+   const pos=state.positions[i],xy=CELL[pos]||CELL[0],c=state.colors[i];
+   const stack=samePos[pos]||0;samePos[pos]=stack+1;
+   return `<div class="oca-pawn ${c} ${state.turn===i?'turn':''}" data-seat="${i}" style="left:${xy[0]}%;top:calc(${xy[1]}% - ${stack*12}px)"></div>`;
+ }).join('');
+ ocaPlayers.innerHTML=state.players.map((p,i)=>`<div class="oca-player ${state.turn===i?'turn':''}"><span class="oca-player-chip ${state.colors[i]}"></span><div class="oca-player-copy"><div class="oca-player-name">${p.bot?'🤖 ':''}${p.name}</div><div class="oca-player-meta">Casilla ${state.positions[i]} · ⭐ ${p.stars||0}</div></div></div>`).join('');
+ const ser=state.series||{configured:false,target:1,wins:[]};
+ ocaStatus.textContent=state.over?'🏁 PARTIDA TERMINADA':state.message;
+ ocaDiceText.textContent=state.dice||'—';
+ ocaRoll.disabled=moving||state.over||String(state.players[state.turn].id)!==String(ME);
+
+ if(ser.configured){
+   ocaSetup.classList.add('hidden');
+ }else{
+   ocaSetup.classList.remove('hidden');
+   const host=String(state.players[0].id)===String(ME);
+   ocaStartSeries.style.display=host?'block':'none';
+   ocaLess.style.display=host?'inline-block':'none';
+   ocaMore.style.display=host?'inline-block':'none';
+   ocaTargetPick.style.display=host?'inline-block':'none';
+   ocaWaitHost.style.display=host?'none':'block';
+ }
+ if(!state.over){
+   ocaOver.classList.add('hidden');
+   const fx=document.getElementById('ocaFinalCelebration');
+   if(fx)fx.classList.remove('show');
+ }
+ if(state.over){
+  const w=state.players[state.winner];
+  const champion=ser.champ_over;
+  ocaOverTitle.textContent=champion
+    ?(state.players.findIndex(p=>String(p.id)===String(ME))===state.winner?'🎉 ¡ERES CAMPEÓN!':'🏆 '+w.name+' es campeón')
+    :(state.players.findIndex(p=>String(p.id)===String(ME))===state.winner?'🎉 ¡HAS GANADO LA PARTIDA!':'🏆 '+w.name+' gana la partida');
+  ocaOverText.textContent=state.players.map((p,i)=>p.name+' · Serie '+(ser.wins[i]||0)).join(' · ');
+  ocaOver.classList.remove('hidden');
+
+  let btn=document.getElementById('ocaNextGameBtn');
+  if(!btn){
+    btn=document.createElement('button');btn.id='ocaNextGameBtn';btn.className='oca-roll';btn.style.width='100%';btn.style.marginTop='12px';
+    ocaOver.querySelector('.oca-over-card').appendChild(btn);
+  }
+  const host=String(state.players[0].id)===String(ME);
+  btn.style.display=host?'block':'none';
+  btn.textContent=champion?'NUEVO CAMPEONATO':'SIGUIENTE PARTIDA AHORA';
+  btn.onclick=()=>socket.emit('oca_next_game',{code:CODE});
+
+  if(!progressResult){
+    progressResult=true;
+    const me=state.players.findIndex(p=>String(p.id)===String(ME));
+    fetch('/api/progreso/resultado',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({game:'oca_deluxe',code:CODE+'_r'+ser.round_no,won:me===state.winner,
+      vs_cpu:state.players.some((p,i)=>i!==me&&p.bot),score:63})}).catch(()=>{})
+  }
+ }
+ if(!progressPlay){progressPlay=true;fetch('/api/progreso/jugada',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'oca_deluxe',code:CODE+'_oca'})}).catch(()=>{})}
+}
+const OCA_DICE_PIPS={
+ 1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]
+};
+function setOcaFace(faceEl,n){
+ const on=OCA_DICE_PIPS[n]||[];
+ [...faceEl.querySelectorAll('.oca-pip')].forEach((p,i)=>p.classList.toggle('off',!on.includes(i)));
+}
+function setOcaDiceFaces(front){
+ setOcaFace(ocaDie.querySelector('.oca-front'),front||1);
+ setOcaFace(ocaDie.querySelector('.oca-back'),7-(front||1));
+ setOcaFace(ocaDie.querySelector('.oca-right'),3);
+ setOcaFace(ocaDie.querySelector('.oca-left'),4);
+ setOcaFace(ocaDie.querySelector('.oca-top'),2);
+ setOcaFace(ocaDie.querySelector('.oca-bottom'),5);
+}
+
+
+function ocaZoomStart(pawn){
+ if(!window.matchMedia('(max-width:700px)').matches || !pawn)return;
+ const board=document.getElementById('ocaBoard'); if(!board)return;
+ const br=board.getBoundingClientRect(),pr=pawn.getBoundingClientRect();
+ const x=((pr.left+pr.width/2-br.left)/br.width)*100;
+ const y=((pr.top+pr.height/2-br.top)/br.height)*100;
+ board.style.transformOrigin=Math.max(10,Math.min(90,x))+'% '+Math.max(10,Math.min(90,y))+'%';
+ document.body.classList.add('oca-zooming');
+ board.classList.add('oca-zoom-active');
+}
+function ocaZoomFollow(pawn){
+ if(!window.matchMedia('(max-width:700px)').matches || !pawn)return;
+ const board=document.getElementById('ocaBoard'); if(!board||!board.classList.contains('oca-zoom-active'))return;
+ const br=board.getBoundingClientRect(),pr=pawn.getBoundingClientRect();
+ const x=((pr.left+pr.width/2-br.left)/br.width)*100;
+ const y=((pr.top+pr.height/2-br.top)/br.height)*100;
+ board.style.transformOrigin=Math.max(10,Math.min(90,x))+'% '+Math.max(10,Math.min(90,y))+'%';
+}
+function ocaZoomEnd(){
+ const board=document.getElementById('ocaBoard'); if(!board)return;
+ board.classList.remove('oca-zoom-active');
+ document.body.classList.remove('oca-zooming');
+ setTimeout(()=>board.style.transformOrigin='',380);
+}
+
+function specialSound(sp){const m={goose:S.goose,bridge:S.bridge,inn:S.inn,well:S.well,labyrinth:S.labyrinth,prison:S.prison,dice:S.diceSpecial,death:S.death};if(m[sp])sound(m[sp])}
+
+function ocaIsHost(st){
+ return !!(st && String(st.host_id||'')===String(ME));
+}
+function ocaFinishVictoryIfNeeded(){
+ if(!state||!state.over||!pendingFinal)return;
+ pendingFinal=false;
+ sound(S.win);
+ const w=state.players&&state.players[state.winner];
+ ocaShowFinalCelebration(w?w.name:'');
+ const ser=state.series||{};
+ if(ser.configured && !ser.champ_over && ocaIsHost(state)){
+   clearTimeout(nextRoundTimer);
+   nextRoundTimer=setTimeout(()=>{
+     socket.emit('oca_next_game',{code:CODE});
+   },3400);
+ }
+}
+
+function finishAnim(){
+ ocaZoomEnd();moving=false;
+ render();
+ ocaFinishVictoryIfNeeded();
+ if(queued){const q=queued;queued=null;process(q)}
+}
+function animateDice(value,cb){
+ sound(S.dice);
+ ocaDie.classList.remove('roll');void ocaDie.offsetWidth;ocaDie.classList.add('roll');
+ ocaDiceText.textContent='…';
+ let ticks=0;
+ const timer=setInterval(()=>{
+   setOcaDiceFaces(1+Math.floor(Math.random()*6));
+   ticks++;
+   if(ticks>=9){
+     clearInterval(timer);
+     setOcaDiceFaces(value);
+     ocaDiceText.textContent=value;
+     setTimeout(cb,110);
+   }
+ },85);
+}
+function animateMove(old,d){
+ const mv=d.last_move;if(!mv||mv.seq===lastSeq){state=d;render();return}lastSeq=mv.seq;moving=true;state=old;render();state=d;
+ const pawn=document.querySelector(`.oca-pawn[data-seat="${mv.seat}"]`);ocaZoomStart(pawn);
+ animateDice(mv.dice,()=>{
+  if(!pawn){render();finishAnim();return}
+  let steps=[],p=mv.from;
+  if(mv.from+mv.dice<=63){for(let n=mv.from+1;n<=mv.landing;n++)steps.push(n)}
+  else{for(let n=mv.from+1;n<=63;n++)steps.push(n);for(let n=62;n>=mv.landing;n--)steps.push(n)}
+  let i=0;
+  function next(){
+   if(i<steps.length){const xy=CELL[steps[i++]];pawn.style.left=xy[0]+'%';pawn.style.top=xy[1]+'%';ocaZoomFollow(pawn);sound(S.move);setTimeout(next,300);return}
+   if(mv.to!==mv.landing){
+    setTimeout(()=>{const xy=CELL[mv.to];pawn.style.transition='left .75s ease,top .75s ease';pawn.style.left=xy[0]+'%';pawn.style.top=xy[1]+'%';ocaZoomFollow(pawn);specialSound(mv.special);showOcaSpecial(mv.special);setTimeout(()=>{pawn.style.transition='';render();setTimeout(finishAnim,500)},850)},350)
+   }else{if(mv.special){specialSound(mv.special);showOcaSpecial(mv.special)}render();setTimeout(finishAnim,550)}
+  }next();
+ })
+}
+
+let ocaFinalShown=false;
+function ocaShowFinalCelebration(nombre){
+ if(ocaFinalShown)return;
+ ocaFinalShown=true;
+ const box=document.getElementById('ocaFinalCelebration');
+ if(!box)return;
+ document.getElementById('ocaFinalWinner').textContent=(nombre?nombre+' gana la partida':'¡Victoria!');
+ box.classList.add('show');
+ for(let i=0;i<22;i++){
+   const f=document.createElement('div');
+   f.className='oca-feather';f.textContent=(i%3===0?'✨':'🪶');
+   f.style.left=(Math.random()*100)+'vw';
+   f.style.animationDelay=(Math.random()*.6)+'s';
+   box.appendChild(f);
+ }
+ setTimeout(()=>box.classList.remove('show'),3000);
+}
+
+function process(d){
+ if(moving){queued=d;return}
+ const old=state;
+ if(old&&d.series&&old.series&&d.series.round_no!==old.series.round_no){
+   progressResult=false;
+   ocaFinalShown=false;
+   clearTimeout(nextRoundTimer);
+ }
+ if(d.over&&(!old||!old.over))pendingFinal=true;
+
+ if(!old){
+   state=d;render();
+   ocaFinishVictoryIfNeeded();
+ }else if(d.last_move&&d.last_move.seq!==lastSeq){
+   animateMove(old,d);
+ }else{
+   state=d;render();
+   ocaFinishVictoryIfNeeded();
+ }
+}
+ocaLess.onclick=()=>ocaTargetPick.textContent=Math.max(1,+ocaTargetPick.textContent-1);
+ocaMore.onclick=()=>ocaTargetPick.textContent=Math.min(9,+ocaTargetPick.textContent+1);
+ocaStartSeries.onclick=()=>socket.emit('oca_configure',{code:CODE,target:+ocaTargetPick.textContent||1});
+
+ocaRoll.onclick=()=>{if(moving||ocaRoll.disabled)return;ocaRoll.disabled=true;socket.emit('oca_roll',{code:CODE})};
+socket.on('connect',()=>socket.emit('oca_game_join',{code:CODE}));
+socket.on('oca_state',process);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% block title %}Dominó Deluxe{% endblock %}
+{% block content %}
+<style>
+.do-shell{width:min(1180px,calc(100% - 8px));margin:5px auto 24px;color:#fff}
+.do-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.do-head h1{margin:0;font-size:clamp(27px,5vw,43px)}
+.do-head small{font-size:9px;letter-spacing:.16em;color:#d4bd76;font-weight:1000}
+.do-score{display:flex;gap:6px;overflow-x:auto;margin:6px 0}.do-player{min-width:150px;flex:1;background:#111e31;border:1px solid #324968;border-radius:12px;padding:7px 9px;display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:1000}
+.do-player.active{outline:2px solid #ffd644;box-shadow:0 0 13px #ffd64455}.do-player strong{color:#ffd854;font-size:18px}
+.do-series{text-align:center;font-size:9px;color:#e9ca71;font-weight:1000;margin:4px}
+.do-msg{width:min(820px,96%);margin:6px auto;background:#102338;border:1px solid #35516e;border-radius:12px;padding:8px 10px;text-align:center;font-size:10px;font-weight:900}
+.do-table{
+ position:relative;min-height:430px;border-radius:24px;padding:18px;
+ background:
+ radial-gradient(circle at 50% 40%,rgba(255,255,255,.04),transparent 36%),
+ repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 1px,transparent 1px 7px),
+ linear-gradient(145deg,#0d6a4b,#064532 68%,#033326);
+ border:12px solid #5f371f;box-shadow:inset 0 0 0 4px #9f6d3f,inset 0 0 50px #001b12,0 16px 35px #0008
+}
+.do-chain{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:3px;min-height:210px;padding:8px}
+.do-tile{position:relative;border:0;background:transparent;padding:0;flex:0 0 auto;filter:drop-shadow(0 4px 4px #0008);transition:transform .18s ease}
+.do-tile img{display:block;width:52px;height:100px;object-fit:cover;border-radius:4px}
+.do-tile.chain-tile img{width:42px;height:82px}.do-tile.horizontal{transform:rotate(90deg);margin:20px}
+.do-tile.playable{cursor:pointer}.do-tile.playable:hover{transform:translateY(-7px) scale(1.06);filter:drop-shadow(0 7px 7px #000) drop-shadow(0 0 9px #ffde52)}
+.do-hand-wrap{margin-top:10px;background:#0d1828;border:1px solid #334a68;border-radius:17px;padding:9px}
+.do-hand-title{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:1000;margin-bottom:6px}
+.do-hand{display:flex;gap:5px;overflow-x:auto;align-items:end;min-height:115px;padding:4px 3px}.do-hand .do-tile img{width:54px;height:106px}
+.do-stock-area{position:absolute;right:14px;bottom:14px;width:165px;min-height:125px;background:#071e18aa;border:1px solid #3d765f;border-radius:14px;padding:8px}
+.do-stock-title{font-size:9px;font-weight:1000;text-align:center;margin-bottom:5px}.do-stock{position:relative;height:91px}.do-stock-tile{position:absolute;bottom:0;border:0;background:transparent;padding:0;cursor:pointer;transition:transform .22s ease}
+.do-stock-tile img{width:43px;height:84px;border-radius:4px;box-shadow:0 3px 5px #0008}.do-stock-tile:hover{transform:translateY(-7px)}
+.do-controls{display:flex;justify-content:center;gap:8px;margin:9px}.do-controls button{border:0;border-radius:12px;padding:11px 20px;font-weight:1000}.do-pass{background:#243a55;color:#fff}.do-pass:disabled{opacity:.35}
+.do-side-choice{position:fixed;inset:0;z-index:9000;background:#020813aa;display:none;place-items:center}.do-side-choice.show{display:grid}.do-side-card{background:#14243a;border:1px solid #526c8c;border-radius:18px;padding:18px;text-align:center}.do-side-card button{margin:7px;border:0;border-radius:11px;padding:11px 18px;font-weight:1000;background:#ffd34a;color:#0b1420}
+.do-deal{position:fixed;inset:0;z-index:11000;background:#020813e8;display:none;overflow:hidden;pointer-events:none}.do-deal.show{display:block}.do-deal-title{position:absolute;left:50%;top:11%;transform:translateX(-50%);font-size:clamp(20px,4vw,38px);font-weight:1000;color:#ffe16a}
+.deal-tile{position:absolute;left:50%;top:48%;width:44px;height:86px;transform:translate(-50%,-50%);background:url("{{url_for('static',filename='domino/reverso.jpg')}}") center/cover;border-radius:4px;box-shadow:0 5px 8px #000b;transition:all .42s cubic-bezier(.2,.8,.2,1)}
+.do-draw-fly{position:fixed;z-index:13000;width:43px;height:84px;background:url("{{url_for('static',filename='domino/reverso.jpg')}}") center/cover;border-radius:4px;pointer-events:none;transition:all .55s cubic-bezier(.2,.8,.2,1);box-shadow:0 6px 10px #000a}
+.do-modal{position:fixed;inset:0;z-index:10000;background:#030914e9;display:grid;place-items:center;padding:16px}.do-modal.hidden{display:none}.do-modal-card{width:min(430px,100%);background:#13233b;border:1px solid #526e92;border-radius:22px;padding:24px;text-align:center}
+.do-pick{display:flex;align-items:center;justify-content:center;gap:14px;margin:16px}.do-pick button{width:44px;height:44px;border:0;border-radius:11px;font-size:24px;font-weight:1000}.do-pick strong{font-size:36px;min-width:48px}.do-start{width:100%;border:0;border-radius:12px;padding:13px;background:linear-gradient(90deg,#ffd43b,#5edce8);font-weight:1000}
+.do-over{position:fixed;inset:0;z-index:9999;background:#020712e1;display:grid;place-items:center;padding:16px}.do-over.hidden{display:none}.do-over-card{width:min(430px,100%);background:#14233a;border:1px solid #567193;border-radius:23px;padding:24px;text-align:center}.do-over-card button,.do-over-card a{display:block;width:100%;box-sizing:border-box;margin-top:9px;padding:12px;border:0;border-radius:12px;background:linear-gradient(90deg,#ffd43b,#59dfe8);color:#07111d;font-weight:1000;text-decoration:none}
+.do-toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:15000;background:#172842;border:1px solid #587396;border-radius:12px;padding:10px 14px;font-size:11px;font-weight:900}
+@media(max-width:700px){
+ .do-shell{width:100%;padding:2px}.do-head{padding:0 4px}.do-head h1{font-size:24px}.do-player{min-width:116px;padding:6px 7px}
+ .do-table{min-height:370px;border-width:8px;padding:7px}.do-chain{min-height:205px;padding:3px;padding-right:92px}
+ .do-tile.chain-tile img{width:34px;height:67px}.do-tile.horizontal{margin:15px}
+ .do-stock-area{right:6px;bottom:7px;width:96px;min-height:104px;padding:5px}.do-stock{height:73px}.do-stock-tile img{width:34px;height:67px}
+ .do-hand-wrap{padding:6px}.do-hand{min-height:102px}.do-hand .do-tile img{width:46px;height:91px}.do-msg{font-size:9px}
+}
+
+.do-opponents{
+ display:flex;gap:8px;justify-content:center;align-items:flex-start;flex-wrap:wrap;
+ margin:7px auto 9px
+}
+.do-opponent{
+ min-width:170px;background:#0f1c2f;border:1px solid #344b68;border-radius:13px;padding:7px 9px
+}
+.do-opponent-head{
+ display:flex;justify-content:space-between;align-items:center;font-size:9px;font-weight:1000;margin-bottom:5px
+}
+.do-opponent-hand{
+ display:flex;justify-content:center;gap:0;min-height:58px;padding:2px 8px;overflow:hidden
+}
+.do-opponent-back{
+ width:31px;height:58px;border-radius:4px;
+ background:url("{{url_for('static',filename='domino/reverso.jpg')}}") center/cover no-repeat;
+ box-shadow:0 3px 6px #0008;
+ margin-left:-12px;
+}
+.do-opponent-back:first-child{margin-left:0}
+
+/* TU MANO: todas las fichas verticales, como de pie */
+.do-hand{
+ align-items:flex-end!important;
+}
+.do-hand .do-tile{
+ transform:none!important;
+ margin:0!important;
+ flex:0 0 auto;
+ background:transparent!important;
+ border:none!important;
+ box-shadow:none!important;
+}
+.do-hand .do-tile img{
+ width:49px!important;
+ height:96px!important;
+ object-fit:cover!important;
+ border-radius:4px!important;
+ box-shadow:0 4px 7px #0008!important;
+ outline:none!important;
+ border:none!important;
+ background:transparent!important;
+}
+.do-hand .do-tile.playable:hover{
+ transform:translateY(-8px) scale(1.04)!important;
+}
+
+/* La cadena sí puede mostrar las fichas giradas para formar el recorrido */
+.do-chain .do-tile.chain-tile.horizontal{
+ transform:rotate(90deg)!important;
+ margin:18px!important;
+}
+/* Si la ficha lógica es 6-5 pero la foto base es 5-6,
+   el giro a 270º hace que visualmente quede 6 junto al 6 y 5 junto al 5. */
+.do-chain .do-tile.chain-tile.horizontal.flipped{
+ transform:rotate(270deg)!important;
+}
+.do-chain .do-tile.chain-tile:not(.horizontal){
+ transform:none!important;
+ margin:0!important;
+}
+.do-chain .do-tile.chain-tile:not(.horizontal).flipped{
+ transform:rotate(180deg)!important;
+}
+
+@media(max-width:700px){
+ .do-opponents{gap:4px;margin:5px 2px 7px}
+ .do-opponent{min-width:46%;padding:5px 6px}
+ .do-opponent-back{width:25px;height:48px;margin-left:-10px}
+ .do-hand .do-tile img{width:43px!important;height:84px!important}
+}
+
+</style>
+
+<div id="doSetup" class="do-modal">
+ <div class="do-modal-card"><div style="font-size:55px">🁫</div><h2>Campeonato de Dominó</h2><p>¿Cuántas partidas hay que ganar para ser campeón?</p>
+ <div class="do-pick"><button id="doLess">−</button><strong id="doTarget">1</strong><button id="doMore">+</button></div>
+ <button id="doStart" class="do-start">EMPEZAR CAMPEONATO</button><p id="doWait" style="display:none">⏳ Esperando al anfitrión…</p></div>
+</div>
+
+<div id="doOver" class="do-over hidden"><div class="do-over-card"><div style="font-size:54px">🏆</div><h2 id="doOverTitle"></h2><p id="doOverText"></p><button id="doNewChamp" style="display:none">NUEVO CAMPEONATO</button><a href="{{url_for('juegos')}}">SALIR AL MENÚ</a></div></div>
+<div id="doDeal" class="do-deal"><div class="do-deal-title">🁫 Repartiendo fichas…</div></div>
+<div id="doSide" class="do-side-choice"><div class="do-side-card"><b>¿En qué lado quieres colocarla?</b><br><button data-side="left">← IZQUIERDA</button><button data-side="right">DERECHA →</button></div></div>
+
+<div class="do-shell">
+ <header class="do-head"><div><small>CLÁSICO · ESTRATEGIA</small><h1>🁫 Dominó Deluxe</h1></div><a class="back-link" href="{{url_for('juegos')}}">← Juegos</a></header>
+ <div id="doScore" class="do-score"></div><div id="doSeries" class="do-series"></div><div id="doMsg" class="do-msg">Esperando…</div>
+ <div id="doOpponents" class="do-opponents"></div>
+ <div class="do-table">
+   <div id="doChain" class="do-chain"></div>
+   <div class="do-stock-area"><div class="do-stock-title">MAZO · <b id="doStockN">0</b></div><div id="doStock" class="do-stock"></div></div>
+ </div>
+ <div class="do-hand-wrap"><div class="do-hand-title"><span>TUS FICHAS</span><span id="doHandN"></span></div><div id="doHand" class="do-hand"></div></div>
+ <div class="do-controls"><button id="doPass" class="do-pass">PASAR</button></div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+(()=>{
+const CODE={{codigo|tojson}},ME={{user.id|tojson}},socket=io();
+let state=null,lastSeq=0,lastRound=0,animating=false,pendingTile=null,playRound=0,resultRound=0;
+const AC=window.AudioContext||window.webkitAudioContext;let ac;
+
+function tone(f,d,type='sine',v=.1){try{ac=ac||new AC();const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+function dealSound(){tone(310,.05,'triangle',.06);setTimeout(()=>tone(240,.07,'sine',.05),45)}
+function tileSound(){tone(145,.08,'square',.1);setTimeout(()=>tone(92,.13,'triangle',.07),55)}
+function drawSound(){tone(380,.06,'triangle',.07);setTimeout(()=>tone(270,.10,'sine',.06),55)}
+function passSound(){tone(180,.12,'sine',.05)}
+function winSound(){[392,523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.26,'triangle',.1),i*120))}
+function toast(t){const e=document.createElement('div');e.className='do-toast';e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),3300)}
+
+function mySeat(){return state?state.viewer:-1}
+function norm(t){return t[0]<=t[1]?t:[t[1],t[0]]}
+function imgFor(t){const q=norm(t);return `{{url_for('static',filename='domino/0_0.jpg')}}`.replace('0_0.jpg',`${q[0]}_${q[1]}.jpg`)}
+function can(t){if(state.left===null)return true;return t.includes(state.left)||t.includes(state.right)}
+function legalIndexes(){return state.hand.map((t,i)=>can(t)?i:-1).filter(i=>i>=0)}
+
+function tileHtml(t,cls='',idx=null){
+ const dbl=t[0]===t[1];
+ const isChain=cls.includes('chain-tile');
+
+ // Los JPG están guardados siempre en orden ascendente (ej. 5-6).
+ // Si la cadena necesita mostrar 6-5, añadimos "flipped" para girarla 180º.
+ const flipped=isChain && !dbl && t[0]>t[1];
+
+ const orientClass=(isChain&&!dbl)?'horizontal':'';
+ const flipClass=flipped?'flipped':'';
+
+ return `<button class="do-tile ${cls} ${orientClass} ${flipClass}" ${idx!==null?`data-i="${idx}"`:''}>
+   <img src="${imgFor(t)}">
+ </button>`;
+}
+
+function renderOpponents(){
+ const me=mySeat();
+ doOpponents.innerHTML=state.players.map((p,i)=>{
+   if(i===me)return '';
+   const n=state.hands[i]||0;
+   const shown=Math.min(n,14);
+   const backs=Array.from({length:shown},()=>'<i class="do-opponent-back"></i>').join('');
+   return `<div class="do-opponent ${state.turn===i&&!state.round_over?'active':''}">
+     <div class="do-opponent-head"><span>${p.name}</span><b>${n} fichas</b></div>
+     <div class="do-opponent-hand">${backs}</div>
+   </div>`;
+ }).join('');
+}
+
+function renderScores(){
+ doScore.innerHTML=state.players.map((p,i)=>`<div class="do-player ${state.turn===i&&!state.round_over?'active':''}"><span>${p.name}</span><strong>${state.wins[i]||0}</strong></div>`).join('');
+ doSeries.textContent=`A ${state.target} victoria${state.target===1?'':'s'} · Partida ${state.round_no}`;
+}
+function renderChain(){
+ doChain.innerHTML=state.chain.map(t=>tileHtml(t,'chain-tile')).join('');
+}
+function renderHand(){
+ const myTurn=state.turn===mySeat()&&!state.round_over&&!animating;
+ const playable=new Set(legalIndexes());
+ doHand.innerHTML=state.hand.map((t,i)=>tileHtml(t,myTurn&&playable.has(i)?'playable':'',i)).join('');
+ doHand.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>chooseTile(+b.dataset.i));
+ doHandN.textContent=`${state.hand.length} fichas`;
+}
+function renderStock(){
+ doStockN.textContent=state.stock_count;
+ doStock.innerHTML='';
+ const myTurn=state.turn===mySeat()&&!state.round_over&&!animating;
+ const mustDraw=myTurn&&legalIndexes().length===0&&state.stock_count>0;
+ const count=Math.min(state.stock_count,14);
+ for(let k=0;k<count;k++){
+   const b=document.createElement('button');b.className='do-stock-tile';b.style.left=Math.min(52,k*4)+'px';b.style.zIndex=k;
+   b.innerHTML=`<img src="{{url_for('static',filename='domino/reverso.jpg')}}">`;
+   b.disabled=!mustDraw;b.onclick=()=>drawFromStock(k);
+   doStock.appendChild(b)
+ }
+}
+function renderMeta(){
+ if(!state)return;
+ const isHost=String(state.host_id)===String(ME),seat=mySeat();
+ if(!state.configured){
+   doSetup.classList.remove('hidden');doStart.style.display=isHost?'block':'none';doLess.style.display=isHost?'inline-block':'none';doMore.style.display=isHost?'inline-block':'none';doTarget.style.display=isHost?'inline-block':'none';doWait.style.display=isHost?'none':'block';return
+ }
+ doSetup.classList.add('hidden');renderScores();renderOpponents();renderChain();renderHand();renderStock();
+ const myTurn=state.turn===seat&&!state.round_over;
+ const playable=legalIndexes().length>0;
+ doPass.disabled=!(myTurn&&!playable&&state.stock_count===0);
+ if(!state.round_over){
+   if(myTurn){
+     if(playable)doMsg.textContent='👉 TU TURNO · Pulsa una ficha iluminada.';
+     else if(state.stock_count>0)doMsg.textContent='🁫 No puedes tirar. Pulsa una ficha del mazo para robar.';
+     else doMsg.textContent='⏭ No puedes tirar y no quedan fichas. Pulsa PASAR.';
+   }else doMsg.textContent=`⏳ Turno de ${state.players[state.turn]?.name||'rival'}…`;
+   doOver.classList.add('hidden');
+ }else{
+   const winner=state.players[state.winner],won=state.winner===seat;
+   doOverTitle.textContent=state.champ_over?(won?'🏆 ¡ERES CAMPEÓN!':`🏆 ${winner.name} ES CAMPEÓN`):(won?'🎉 ¡HAS GANADO!':`${winner.name} gana la partida`);
+   doOverText.textContent=`Marcador: ${state.players.map((p,i)=>`${p.name} ${state.wins[i]}`).join(' · ')}`;
+   doNewChamp.style.display=state.champ_over&&isHost?'block':'none';doOver.classList.remove('hidden');
+   if(won)winSound();
+ }
+ reportProgress();
+}
+function chooseTile(i){
+ if(!state||animating||state.turn!==mySeat()||!can(state.hand[i]))return;
+ const t=state.hand[i];
+ if(state.left===null){socket.emit('domino_play',{code:CODE,index:i});return}
+ const canL=t.includes(state.left),canR=t.includes(state.right);
+ if(canL&&canR&&state.left!==state.right){
+   pendingTile=i;doSide.classList.add('show');
+ }else{
+   socket.emit('domino_play',{code:CODE,index:i,side:canR?'right':'left'});
+ }
+}
+doSide.querySelectorAll('[data-side]').forEach(b=>b.onclick=()=>{doSide.classList.remove('show');if(pendingTile!==null){socket.emit('domino_play',{code:CODE,index:pendingTile,side:b.dataset.side});pendingTile=null}});
+function drawFromStock(k){
+ if(!state||animating)return;
+ const btn=doStock.children[k];if(!btn||btn.disabled)return;
+ const r=btn.getBoundingClientRect(),hr=doHand.getBoundingClientRect();
+ const f=document.createElement('div');f.className='do-draw-fly';f.style.left=r.left+'px';f.style.top=r.top+'px';document.body.appendChild(f);drawSound();
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{f.style.left=(hr.left+hr.width*.5)+'px';f.style.top=(hr.top+15)+'px';f.style.transform='rotate(360deg) scale(.9)'}));
+ setTimeout(()=>{f.remove();socket.emit('domino_draw',{code:CODE,stock_index:Math.min(k,state.stock_count-1)})},560)
+}
+doPass.onclick=()=>{if(!doPass.disabled){passSound();socket.emit('domino_pass',{code:CODE})}};
+
+function runDealAnimation(st){
+ if(lastRound===st.round_no)return;
+ lastRound=st.round_no;animating=true;doDeal.classList.add('show');doDeal.querySelectorAll('.deal-tile').forEach(e=>e.remove());
+ const total=Math.min(28,st.players.length*7+st.stock_count),tiles=[];
+ for(let i=0;i<total;i++){
+   const e=document.createElement('div');e.className='deal-tile';
+   const ang=Math.random()*Math.PI*2,rad=Math.random()*70;
+   e.style.transform=`translate(calc(-50% + ${Math.cos(ang)*rad}px),calc(-50% + ${Math.sin(ang)*rad}px)) rotate(${Math.random()*140-70}deg)`;
+   e.style.zIndex=i;doDeal.appendChild(e);tiles.push(e)
+ }
+ let step=0;
+ const timer=setInterval(()=>{
+   if(step>=Math.min(7,tiles.length)){
+     clearInterval(timer);setTimeout(()=>{doDeal.classList.remove('show');animating=false;renderMeta()},500);return
+   }
+   const e=tiles[tiles.length-1-step];dealSound();
+   e.style.left=(15+Math.random()*70)+'%';e.style.top='92%';e.style.transform=`translate(-50%,-50%) rotate(${Math.random()*40-20}deg) scale(.9)`;step++
+ },170)
+}
+function animateEvent(st){
+ const ev=st.last_event;if(!ev||ev.seq===lastSeq)return;
+ lastSeq=ev.seq;
+ if(ev.type==='play'){tileSound();doMsg.textContent=`🁫 ${st.players[ev.seat].name} coloca ${ev.placed[0]}-${ev.placed[1]}.`}
+ else if(ev.type==='draw'){drawSound();doMsg.textContent=`🁫 ${st.players[ev.seat].name} roba una ficha.`}
+ else if(ev.type==='pass'){passSound();doMsg.textContent=`⏭ ${st.players[ev.seat].name} pasa.`}
+}
+function reportProgress(){
+ if(!state||!state.configured)return;
+ if(playRound!==state.round_no){playRound=state.round_no;fetch('/api/progreso/jugada',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'domino_deluxe',code:CODE+'_r'+state.round_no})}).then(r=>r.json()).then(d=>(d.new_medals||[]).forEach(m=>toast(`🏅 ${m.title} · +${m.stars} ⭐`))).catch(()=>{})}
+ if(state.round_over&&resultRound!==state.round_no){resultRound=state.round_no;const won=state.winner===mySeat();fetch('/api/progreso/resultado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'domino_deluxe',code:CODE+'_r'+state.round_no,won,vs_cpu:state.players.some(p=>p.bot),score:state.hand.length})}).then(r=>r.json()).then(d=>(d.new_medals||[]).forEach(m=>toast(`🏅 ${m.title} · +${m.stars} ⭐`))).catch(()=>{})}
+}
+function applyState(st){
+ state=st;animateEvent(st);renderMeta();
+ if(st.configured&&!st.round_over&&lastRound!==st.round_no)runDealAnimation(st)
+}
+doLess.onclick=()=>doTarget.textContent=Math.max(1,+doTarget.textContent-1);
+doMore.onclick=()=>doTarget.textContent=Math.min(9,+doTarget.textContent+1);
+doStart.onclick=()=>socket.emit('domino_configure',{code:CODE,target:+doTarget.textContent||1});
+doNewChamp.onclick=()=>{doOver.classList.add('hidden');socket.emit('domino_new_championship',{code:CODE})};
+socket.on('connect',()=>socket.emit('domino_game_join',{code:CODE}));
+socket.on('domino_state',applyState);
+socket.on('app_error',d=>toast(d.message||'Error'));
+})();
+</script>
+{% endblock %}

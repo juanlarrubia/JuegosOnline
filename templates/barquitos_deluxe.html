@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+{% block title %}Batalla Naval{% endblock %}
+{% block content %}
+<style>
+.bn-shell{width:min(1080px,calc(100% - 12px));margin:7px auto 28px;color:#fff}
+.bn-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.bn-head h1{margin:0;font-size:clamp(28px,4vw,43px)}.bn-head small{font-size:10px;letter-spacing:.14em;color:#7edfff;font-weight:900}
+.bn-hud{display:grid;grid-template-columns:1.4fr .7fr .7fr;gap:7px;margin-bottom:8px}
+.bn-hud>div{background:#0f1b31;border:1px solid #314769;border-radius:13px;padding:9px 10px;text-align:center;font-size:10px;font-weight:950}
+.bn-message{background:#0d2737;border:1px solid #265976;border-radius:13px;padding:9px 12px;text-align:center;font-size:11px;font-weight:900;margin:7px 0}
+.bn-setup{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:10px;align-items:start}
+.bn-board-card{background:#071725;border:1px solid #2a4661;border-radius:18px;padding:10px;box-shadow:0 14px 35px #0006}
+.bn-board-title{display:flex;justify-content:space-between;align-items:center;margin:0 0 7px;font-size:11px}
+.bn-board{position:relative;aspect-ratio:1/1;background:linear-gradient(145deg,#c78646,#6f371d);border:7px solid #6e3b20;border-radius:18px;padding:34px 28px 28px 34px;box-shadow:inset 0 0 0 3px #d9a25c,inset 0 0 24px #0007,0 10px 24px #0006}
+.bn-grid{position:relative;width:100%;height:100%;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);gap:3px}
+.bn-cell{position:relative;border:1px solid #123e52;border-radius:4px;background:linear-gradient(145deg,#1b92b5,#08728f 60%,#07566d);box-shadow:inset 2px 2px 4px #43bdd7,inset -3px -3px 4px #033747;cursor:pointer;padding:0}
+.bn-cell:hover{filter:brightness(1.08)}
+.bn-cell.preview-ok{background:linear-gradient(145deg,#6bcf86,#2c9860)!important;box-shadow:inset 0 0 0 2px #b5ffd0,0 0 10px #54e38b88}
+.bn-cell.preview-bad{background:linear-gradient(145deg,#e86868,#a92f3a)!important;box-shadow:inset 0 0 0 2px #ffc3c3}
+.bn-cell.ship{background:linear-gradient(145deg,#8e9da8,#3e4b55 60%,#1e2730);box-shadow:inset 2px 2px 4px #d3dbe1,inset -3px -3px 4px #121820}
+.bn-cell.hit::after,.bn-cell.miss::after{content:"";position:absolute;inset:22%;border-radius:50%}
+.bn-cell.hit::after{background:#f3382f;box-shadow:0 0 12px #ff4b3d}.bn-cell.miss::after{background:#dff8ff;box-shadow:0 0 8px #fff}
+.bn-label-top{position:absolute;left:34px;right:28px;top:8px;display:grid;grid-template-columns:repeat(10,1fr);text-align:center;color:#2f1c12;font-weight:1000;font-size:11px}
+.bn-label-left{position:absolute;top:34px;bottom:28px;left:8px;display:grid;grid-template-rows:repeat(10,1fr);align-items:center;color:#2f1c12;font-weight:1000;font-size:11px}
+.bn-dock{background:#0d1929;border:1px solid #314769;border-radius:18px;padding:12px}
+.bn-dock h3{margin:0 0 9px;font-size:15px}.bn-dock-note{font-size:9px;color:#9fb3cb;line-height:1.35;margin-bottom:9px}
+.bn-ship-list{display:grid;gap:7px}
+.bn-ship-btn{display:grid;grid-template-columns:86px 1fr auto;gap:8px;align-items:center;width:100%;border:1px solid #334b69;border-radius:12px;background:#142239;color:#fff;padding:6px;text-align:left;cursor:pointer}
+.bn-ship-btn.selected{outline:2px solid #ffd541;box-shadow:0 0 14px #ffd54155}.bn-ship-btn.placed{opacity:.42;filter:grayscale(.65);pointer-events:none}
+.bn-ship-btn img{width:86px;height:42px;object-fit:cover;border-radius:7px;border:1px solid #546a83}
+.bn-ship-btn strong{font-size:11px}.bn-ship-btn span{font-size:9px;color:#adc0d6}.bn-length{font-size:14px!important;color:#ffd75c!important;font-weight:1000}
+.bn-actions{display:flex;gap:7px;margin-top:10px}.bn-actions button{flex:1;border:0;border-radius:11px;padding:11px;font-size:11px;font-weight:1000;cursor:pointer}
+.bn-rotate{background:#203756;color:#fff}.bn-ready{background:linear-gradient(90deg,#ffd43b,#59dfe8);color:#07111d}.bn-ready:disabled{opacity:.35}
+.bn-battle{display:none;grid-template-columns:1fr 1fr;gap:10px}.bn-battle.show{display:grid}
+.bn-setup.hidden{display:none}
+.bn-toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;background:#13213a;border:1px solid #526989;border-radius:12px;padding:10px 14px;font-size:11px;font-weight:900;box-shadow:0 10px 30px #0008}
+@media(max-width:760px){
+ .bn-shell{width:100%;padding:2px;margin:0 auto 18px}
+ .bn-head{padding:0 3px}.bn-head h1{font-size:25px}.bn-hud{grid-template-columns:1fr 1fr;gap:5px;margin:5px 2px}.bn-hud>div:first-child{grid-column:1/-1}
+ .bn-setup{grid-template-columns:1fr}.bn-board-card{padding:5px}.bn-board{border-width:5px;border-radius:12px;padding:28px 23px 23px 28px}
+ .bn-label-top{left:28px;right:23px;top:5px;font-size:8px}.bn-label-left{top:28px;bottom:23px;left:5px;font-size:8px}
+ .bn-grid{gap:2px}.bn-cell{border-radius:3px}
+ .bn-dock{padding:9px}.bn-ship-list{grid-template-columns:1fr 1fr}.bn-ship-btn{grid-template-columns:56px 1fr;gap:5px;padding:5px}.bn-ship-btn img{width:56px;height:32px}.bn-length{display:none}
+ .bn-ship-btn strong{font-size:9px}.bn-ship-btn span{font-size:7px}.bn-actions{position:sticky;bottom:4px;z-index:100;background:#081421dd;padding:6px;border-radius:12px;backdrop-filter:blur(5px)}
+ .bn-battle{grid-template-columns:1fr;gap:8px}.bn-battle .bn-board-card{padding:5px}
+}
+
+.bn-series-modal{
+ position:fixed;inset:0;z-index:10000;background:#020812df;
+ display:grid;place-items:center;padding:16px
+}
+.bn-series-modal.hidden{display:none}
+.bn-series-card{
+ width:min(420px,100%);background:#122138;border:1px solid #4f6c8f;
+ border-radius:22px;padding:24px;text-align:center;box-shadow:0 20px 55px #0009
+}
+.bn-series-card h2{margin:5px 0 8px}.bn-series-card p{font-size:11px;color:#cbd8e8}
+.bn-series-pick{display:flex;justify-content:center;align-items:center;gap:14px;margin:16px 0}
+.bn-series-pick button{width:44px;height:44px;border:0;border-radius:11px;font-size:23px;font-weight:1000;cursor:pointer}
+.bn-series-pick strong{font-size:34px;min-width:48px}
+.bn-series-start{width:100%;border:0;border-radius:13px;padding:13px;background:linear-gradient(90deg,#ffd43b,#59dfe8);font-weight:1000;color:#07111d;cursor:pointer}
+.bn-scoreline{font-size:10px;color:#ffd65a;font-weight:900;margin-top:5px}
+
+
+.bn-cell.blocked{
+ background:
+   repeating-linear-gradient(45deg,#8eb5c4 0 5px,#7196a5 5px 10px)!important;
+ opacity:.55;
+ cursor:not-allowed!important;
+ filter:saturate(.45);
+}
+.bn-cell.blocked::before{
+ content:"×";
+ position:absolute;inset:0;display:grid;place-items:center;
+ color:#173545;font-size:clamp(9px,2.2vw,18px);font-weight:1000;opacity:.7;
+}
+.bn-cell.hit{overflow:visible}
+.bn-cell.hit::after{display:none!important}
+.bn-flame{
+ position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);
+ width:72%;height:78%;z-index:8;pointer-events:none;
+ filter:drop-shadow(0 0 5px #ff7417) drop-shadow(0 0 9px #ff2a00);
+}
+.bn-flame::before,.bn-flame::after{
+ content:"";position:absolute;left:50%;bottom:4%;transform-origin:50% 100%;
+ border-radius:50% 50% 45% 45%;
+}
+.bn-flame::before{
+ width:72%;height:88%;transform:translateX(-50%) rotate(2deg);
+ background:radial-gradient(ellipse at 50% 75%,#fff59b 0 14%,#ffd229 15% 32%,#ff7613 33% 62%,#ec2507 63% 82%,transparent 83%);
+ animation:bnFireOuter .52s ease-in-out infinite alternate;
+}
+.bn-flame::after{
+ width:38%;height:61%;transform:translateX(-50%) rotate(-4deg);
+ background:radial-gradient(ellipse at 50% 72%,#fffbd0 0 18%,#ffd92d 19% 48%,#ff700d 49% 78%,transparent 79%);
+ animation:bnFireInner .37s ease-in-out infinite alternate-reverse;
+}
+.bn-hit-burst{
+ position:absolute;inset:-22%;z-index:12;pointer-events:none;
+ border-radius:50%;
+ background:radial-gradient(circle,#fff8a8 0 7%,#ffd22e 8% 19%,#ff6512 20% 35%,#e62508 36% 49%,transparent 50%);
+ animation:bnHitBurst .62s ease-out forwards;
+}
+@keyframes bnHitBurst{
+ 0%{transform:scale(.15);opacity:1}
+ 65%{transform:scale(1.25);opacity:.95}
+ 100%{transform:scale(1.65);opacity:0}
+}
+@keyframes bnFireOuter{
+ from{transform:translateX(-50%) scale(.93,1) rotate(-3deg)}
+ to{transform:translateX(-50%) scale(1.07,.92) rotate(4deg)}
+}
+@keyframes bnFireInner{
+ from{transform:translateX(-50%) scale(.88,1.05) rotate(3deg)}
+ to{transform:translateX(-50%) scale(1.08,.9) rotate(-5deg)}
+}
+
+
+.bn-fleet-status{
+ display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:8px
+}
+.bn-fleet-mini{
+ position:relative;background:#101d30;border:1px solid #344b69;border-radius:10px;
+ padding:5px;text-align:center;overflow:hidden;min-height:58px
+}
+.bn-fleet-mini img{width:100%;height:34px;object-fit:cover;border-radius:6px;display:block}
+.bn-fleet-mini b{display:block;font-size:8px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bn-fleet-mini.sunk{filter:grayscale(.35);border-color:#e45324}
+.bn-fleet-mini.sunk::after{
+ content:"🔥";position:absolute;inset:0;display:grid;place-items:center;
+ font-size:32px;background:rgba(38,7,2,.34);
+ text-shadow:0 0 8px #ff8a22,0 0 15px #ff3300;
+ animation:bnFleetFire .48s ease-in-out infinite alternate
+}
+@keyframes bnFleetFire{
+ from{transform:scale(.95);filter:brightness(.95)}
+ to{transform:scale(1.07);filter:brightness(1.35)}
+}
+.bn-cell.ship-flash,
+.bn-cell.hit-flash{
+ animation:bnShipFlash .24s linear 0s 7 alternate!important;
+}
+@keyframes bnShipFlash{
+ from{filter:brightness(1) saturate(1)}
+ to{filter:brightness(2.1) saturate(1.7);box-shadow:inset 0 0 0 3px #fff36b,0 0 18px #ff5b18}
+}
+.bn-cell.enemy-locked{cursor:not-allowed!important;opacity:.78}
+.bn-cpu-lock{
+ display:none;position:absolute;inset:0;z-index:40;background:rgba(4,15,26,.18);
+ pointer-events:auto;cursor:wait
+}
+.bn-board-card.cpu-turn .bn-cpu-lock{display:block}
+@media(max-width:760px){
+ .bn-fleet-status{grid-template-columns:repeat(5,1fr);gap:3px}
+ .bn-fleet-mini{padding:3px;min-height:43px}.bn-fleet-mini img{height:25px}.bn-fleet-mini b{font-size:6px}
+ .bn-fleet-mini.sunk::after{font-size:24px}
+}
+
+
+.bn-grid{overflow:visible}
+.bn-super-explosion{
+ position:absolute;z-index:50;pointer-events:none;transform:translate(-50%,-50%);
+ width:22%;aspect-ratio:1/1;border-radius:50%;
+ background:radial-gradient(circle,#fffbd0 0 6%,#ffe13a 7% 18%,#ff7b16 19% 36%,#f02a08 37% 54%,transparent 55%);
+ filter:drop-shadow(0 0 16px #ff6a00) drop-shadow(0 0 28px #ff2600);
+ animation:bnMegaBlast .95s ease-out forwards;
+}
+.bn-super-explosion::before,.bn-super-explosion::after{
+ content:"";position:absolute;inset:-30%;border-radius:50%;
+ border:5px solid #ffd73b;opacity:.9;animation:bnBlastRing .9s ease-out forwards
+}
+.bn-super-explosion::after{inset:-52%;border-color:#ff5217;animation-delay:.08s}
+.bn-spark{
+ position:absolute;left:50%;top:50%;width:6px;height:24px;border-radius:5px;
+ background:linear-gradient(#fff,#ffd11a,#ff4c0a);
+ transform-origin:50% 0;animation:bnSparkFly .85s ease-out forwards
+}
+@keyframes bnMegaBlast{
+ 0%{transform:translate(-50%,-50%) scale(.12);opacity:1}
+ 55%{transform:translate(-50%,-50%) scale(1.35);opacity:1}
+ 100%{transform:translate(-50%,-50%) scale(1.8);opacity:0}
+}
+@keyframes bnBlastRing{
+ from{transform:scale(.2);opacity:1}
+ to{transform:scale(1.8);opacity:0}
+}
+@keyframes bnSparkFly{
+ from{transform:rotate(var(--r)) translateY(0) scaleY(.5);opacity:1}
+ to{transform:rotate(var(--r)) translateY(-95px) scaleY(1.35);opacity:0}
+}
+
+#bnVictoryFx{
+ position:fixed;inset:0;z-index:20000;display:none;overflow:hidden;
+ background:
+   radial-gradient(circle at 50% 45%,rgba(40,165,232,.3),transparent 35%),
+   linear-gradient(rgba(2,10,22,.88),rgba(1,5,14,.96));
+ align-items:center;justify-content:center;pointer-events:none
+}
+#bnVictoryFx.show{display:flex;animation:bnVictoryFade .3s ease-out both}
+.bn-victory-card{
+ position:relative;z-index:5;text-align:center;width:min(520px,88vw);
+ padding:28px 22px;border-radius:28px;
+ background:linear-gradient(145deg,#0d2841,#153e61 58%,#0a1e32);
+ border:3px solid #ffd84b;box-shadow:0 0 45px #00b7ff66,0 22px 70px #000b;
+ animation:bnVictoryPop .8s cubic-bezier(.2,.9,.25,1.2) both
+}
+.bn-victory-icon{font-size:clamp(78px,18vw,150px);line-height:1;animation:bnVictoryShip 1.1s ease-in-out infinite alternate}
+.bn-victory-title{font-size:clamp(34px,8vw,68px);font-weight:1000;color:#ffe65d;text-shadow:0 3px 0 #9c5e00,0 0 18px #ffd73688}
+.bn-victory-sub{font-size:clamp(14px,3.4vw,24px);font-weight:900;color:#d9f6ff;margin-top:8px}
+.bn-victory-wave{
+ position:absolute;left:-10%;width:120%;height:22%;bottom:-7%;
+ background:repeating-radial-gradient(ellipse at 50% 0,#1ac6ef 0 8%,#087ba4 9% 16%,transparent 17% 26%);
+ opacity:.75;animation:bnWaveMove 1.4s linear infinite
+}
+.bn-victory-star{
+ position:absolute;z-index:2;font-size:clamp(18px,4vw,38px);
+ animation:bnVictoryStar 1.7s ease-out forwards
+}
+@keyframes bnVictoryFade{from{opacity:0}to{opacity:1}}
+@keyframes bnVictoryPop{from{transform:scale(.25) rotate(-5deg);opacity:0}70%{transform:scale(1.08) rotate(2deg)}to{transform:scale(1);opacity:1}}
+@keyframes bnVictoryShip{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-12px) rotate(4deg)}}
+@keyframes bnWaveMove{from{transform:translateX(-3%)}to{transform:translateX(3%)}}
+@keyframes bnVictoryStar{0%{transform:scale(.1) rotate(0);opacity:0}25%{opacity:1}100%{transform:scale(1.9) rotate(320deg);opacity:0}}
+
+</style>
+
+
+<div id="bnSeriesModal" class="bn-series-modal">
+ <div class="bn-series-card">
+  <div style="font-size:56px">🏆</div>
+  <h2>Campeonato de Batalla Naval</h2>
+  <p>¿Cuántas partidas hay que ganar para ser campeón?</p>
+  <div class="bn-series-pick">
+   <button id="bnLess" type="button">−</button>
+   <strong id="bnTarget">1</strong>
+   <button id="bnMore" type="button">+</button>
+  </div>
+  <button id="bnSeriesStart" class="bn-series-start" type="button">EMPEZAR CAMPEONATO</button>
+  <p id="bnWaitHost" style="display:none;margin-top:12px">⏳ Esperando al anfitrión…</p>
+ </div>
+</div>
+
+
+<div id="bnVictoryFx">
+ <div class="bn-victory-card">
+  <div class="bn-victory-icon">🚢💥</div>
+  <div class="bn-victory-title">¡VICTORIA NAVAL!</div>
+  <div class="bn-victory-sub">Has hundido toda la flota enemiga</div>
+ </div>
+ <div class="bn-victory-wave"></div>
+</div>
+
+<div class="bn-shell">
+ <header class="bn-head"><div><small>ESTRATEGIA · FLOTA</small><h1>⚓ Batalla Naval</h1></div><a class="back-link" href="{{url_for('juegos')}}">← Juegos</a></header>
+ <div class="bn-hud"><div id="bnStatus">Selecciona un barco para colocarlo</div><div>🚢 Flota: <b id="bnShipsLeft">5</b></div><div>🎯 Impactos: <b id="bnHits">0/17</b></div></div>
+ <div id="bnSeriesScore" class="bn-scoreline">Juan 0 · CPU 0 · A 1 victoria</div><div id="bnMessage" class="bn-message">Primero pulsa un barco. Después pasa por el tablero para ver dónde quedará y haz clic para colocarlo.</div>
+
+ <section id="bnSetup" class="bn-setup">
+   <div class="bn-board-card">
+     <div class="bn-board-title"><b>TU TABLERO</b><span id="bnOrientation">Horizontal</span></div>
+     <div class="bn-board">
+       <div class="bn-label-top"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span><span>I</span><span>J</span></div>
+       <div class="bn-label-left"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span></div>
+       <div id="bnOwnSetup" class="bn-grid"></div>
+     </div>
+   </div>
+   <aside class="bn-dock">
+     <h3>🚢 Selecciona un barco</h3>
+     <div class="bn-dock-note">El barco seleccionado queda resaltado. Al pasar por el tablero verás una sombra verde si cabe o roja si no cabe. En móvil, toca una casilla para previsualizar y vuelve a tocar para colocarlo.</div>
+     <div id="bnShipList" class="bn-ship-list"></div>
+     <div class="bn-actions">
+       <button class="bn-rotate" id="bnRotate">↻ GIRAR</button>
+       <button class="bn-ready" id="bnReady" disabled>EMPEZAR BATALLA</button>
+     </div>
+   </aside>
+ </section>
+
+ <section id="bnBattle" class="bn-battle">
+   <div class="bn-board-card">
+     <div class="bn-board-title"><b>TU FLOTA</b><span>Defiende tus barcos</span></div>
+     <div class="bn-board">
+       <div class="bn-label-top"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span><span>I</span><span>J</span></div>
+       <div class="bn-label-left"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span></div>
+       <div id="bnOwnBattle" class="bn-grid"></div>
+     </div>
+     <div id="bnOwnFleetStatus" class="bn-fleet-status"></div>
+   </div>
+   <div class="bn-board-card">
+     <div class="bn-board-title"><b>MAR ENEMIGO</b><span>Dispara aquí</span></div>
+     <div class="bn-board">
+       <div class="bn-label-top"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span><span>I</span><span>J</span></div>
+       <div class="bn-label-left"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span></div>
+       <div id="bnEnemy" class="bn-grid"></div>
+     </div>
+     <div id="bnEnemyFleetStatus" class="bn-fleet-status"></div>
+   </div>
+ </section>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+(()=>{
+const CODE={{codigo|tojson}},ME={{user.id|tojson}},socket=io();
+const SHIPS=[
+ {id:1,name:'Portaaviones',len:5,img:"{{url_for('static',filename='barquitos/portaaviones.jpg')}}"},
+ {id:2,name:'Acorazado',len:4,img:"{{url_for('static',filename='barquitos/acorazado.jpg')}}"},
+ {id:3,name:'Crucero',len:3,img:"{{url_for('static',filename='barquitos/crucero.jpg')}}"},
+ {id:4,name:'Submarino',len:3,img:"{{url_for('static',filename='barquitos/submarino.jpg')}}"},
+ {id:5,name:'Destructor',len:2,img:"{{url_for('static',filename='barquitos/destructor.jpg')}}"}
+];
+
+let state=null,own=Array(100).fill(0),selected=null,horizontal=true,preview=[],previewOk=false,mobilePreviewCell=null;
+let lastSeq=0,resultKey='',playKey='';
+const AC=window.AudioContext||window.webkitAudioContext;let ac;
+
+function tone(freq,dur,type="sine",vol=.12){try{ac=ac||new AC();let o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(vol,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur)}catch(e){}}
+function shotSound(){tone(120,.08,"square",.16);setTimeout(()=>tone(70,.14,"sawtooth",.12),60)}
+function splashSound(){tone(280,.08,"sine",.08);setTimeout(()=>tone(180,.18,"sine",.06),70)}
+function boomSound(){tone(105,.16,"sawtooth",.22);setTimeout(()=>tone(72,.34,"square",.17),80);setTimeout(()=>tone(48,.62,"sawtooth",.13),190);setTimeout(()=>tone(34,.82,"square",.07),330)}
+function sunkBoomSound(){boomSound();setTimeout(()=>tone(150,.20,"sawtooth",.24),120);setTimeout(()=>tone(82,.48,"square",.18),240);setTimeout(()=>tone(42,1.05,"sawtooth",.12),360)}
+function victorySound(){[392,523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.34,"triangle",.12),i*150));setTimeout(()=>tone(1318,.8,"sine",.13),760)}
+
+function cellsFor(i,len,h=horizontal){
+ const r=Math.floor(i/10),c=i%10,out=[];
+ for(let k=0;k<len;k++){const rr=r+(h?0:k),cc=c+(h?k:0);if(rr>9||cc>9)return[];out.push(rr*10+cc)}
+ return out
+}
+function neighbors(i){const r=Math.floor(i/10),c=i%10,out=[];for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;const rr=r+dr,cc=c+dc;if(rr>=0&&rr<10&&cc>=0&&cc<10)out.push(rr*10+cc)}return out}
+function halo(cells){const set=new Set(cells),out=new Set();cells.forEach(i=>neighbors(i).forEach(n=>{if(!set.has(n))out.add(n)}));return [...out]}
+function canPlace(cells){if(!cells.length||cells.some(i=>own[i]))return false;return halo(cells).every(i=>!own[i])}
+function placed(id){return own.some(v=>v===id)}
+function shipById(id){return SHIPS.find(s=>s.id===id)}
+function toast(text){const e=document.createElement('div');e.className='bn-toast';e.textContent=text;document.body.appendChild(e);setTimeout(()=>e.remove(),2800)}
+
+function paintPreview(){
+ [...bnOwnSetup.querySelectorAll('.bn-cell')].forEach((el,i)=>{
+   el.classList.remove('preview-ok','preview-bad');
+   if(preview.includes(i))el.classList.add(previewOk?'preview-ok':'preview-bad');
+ })
+}
+function renderSetup(){
+ bnOwnSetup.innerHTML=Array.from({length:100},(_,i)=>`<button class="bn-cell ${own[i]?'ship':''}" data-i="${i}"></button>`).join('');
+ bnOwnSetup.querySelectorAll('.bn-cell').forEach(el=>{
+   const i=+el.dataset.i;
+   el.onmouseenter=()=>showPreview(i);
+   el.onmouseleave=()=>{if(!matchMedia('(hover:none)').matches){preview=[];paintPreview()}};
+   el.onclick=()=>setupClick(i);
+   el.ontouchstart=()=>showPreview(i);
+ });
+}
+function renderShipList(){
+ bnShipList.innerHTML=SHIPS.map(sh=>`<button class="bn-ship-btn ${selected===sh.id?'selected':''} ${placed(sh.id)?'placed':''}" data-ship="${sh.id}">
+ <img src="${sh.img}"><div><strong>${sh.name}</strong><br><span>${sh.len} casillas</span></div><span class="bn-length">${sh.len}</span></button>`).join('');
+ bnShipList.querySelectorAll('[data-ship]').forEach(b=>b.onclick=()=>{
+   const id=+b.dataset.ship;if(placed(id))return;selected=id;preview=[];mobilePreviewCell=null;renderPlacement();
+   bnMessage.textContent=`${shipById(id).name} seleccionado. Elige dónde colocarlo.`;
+ })
+}
+function renderPlacement(){
+ renderShipList();renderSetup();
+ const left=SHIPS.filter(s=>!placed(s.id)).length;
+ bnShipsLeft.textContent=left;bnReady.disabled=left!==0;
+ bnOrientation.textContent=horizontal?'Horizontal':'Vertical';
+}
+function showPreview(i){
+ if(!selected||placed(selected))return;
+ const sh=shipById(selected);preview=cellsFor(i,sh.len);previewOk=canPlace(preview);paintPreview();
+}
+function setupClick(i){
+ if(!selected){bnMessage.textContent='⚠️ Primero selecciona un barco.';return}
+ const sh=shipById(selected),cells=cellsFor(i,sh.len),ok=canPlace(cells);
+ if(matchMedia('(hover:none)').matches&&mobilePreviewCell!==i){mobilePreviewCell=i;preview=cells;previewOk=ok;paintPreview();return}
+ if(!ok){bnMessage.textContent='❌ Debe quedar una casilla libre alrededor de cada barco.';preview=cells;previewOk=false;paintPreview();return}
+ cells.forEach(x=>own[x]=sh.id);tone(420,.08,'sine',.06);
+ selected=null;preview=[];mobilePreviewCell=null;bnMessage.textContent=`✅ ${sh.name} colocado.`;renderPlacement();
+}
+bnRotate.onclick=()=>{horizontal=!horizontal;preview=[];mobilePreviewCell=null;renderPlacement()};
+bnReady.onclick=()=>{
+ if(SHIPS.some(s=>!placed(s.id)))return;
+ bnReady.disabled=true;bnMessage.textContent='⏳ Flota preparada. Esperando al rival…';
+ socket.emit('bn_ready',{code:CODE,board:own});
+};
+
+function fireHtml(st){return st===2?'<span class="bn-flame"></span>':''}
+function fleetHtml(sunk){
+ return SHIPS.map(sh=>`<div class="bn-fleet-mini ${sunk.includes(sh.id)?'sunk':''}"><img src="${sh.img}"><b>${sh.name}</b></div>`).join('')
+}
+function renderBattle(){
+ const myTurn=state.battle&&state.turn===state.viewer&&!state.round_over;
+ bnOwnBattle.innerHTML=state.own_board.map((v,i)=>{
+   const st=state.own_received[i];
+   return `<button class="bn-cell ${v?'ship':''} ${st===1?'miss':''} ${st===2?'hit':''} ${st===3?'blocked':''}" disabled>${fireHtml(st)}</button>`
+ }).join('');
+ bnEnemy.innerHTML=state.enemy_shots.map((st,i)=>{
+   const locked=!myTurn||st!==0;
+   return `<button class="bn-cell ${st===1?'miss':''} ${st===2?'hit':''} ${st===3?'blocked':''} ${!myTurn?'enemy-locked':''}" data-i="${i}" ${locked?'disabled':''}>${fireHtml(st)}</button>`
+ }).join('');
+ bnEnemy.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{if(!b.disabled)socket.emit('bn_fire',{code:CODE,cell:+b.dataset.i})});
+ bnOwnFleetStatus.innerHTML=fleetHtml(state.own_sunk||[]);
+ bnEnemyFleetStatus.innerHTML=fleetHtml(state.enemy_sunk||[]);
+ bnHits.textContent=`${state.enemy_shots.filter(x=>x===2).length}/17`;
+ bnStatus.textContent=state.round_over?'PARTIDA TERMINADA':(myTurn?'TU TURNO':`TURNO DE ${state.players[state.turn]?.name||'RIVAL'}`);
+}
+
+function superExplosion(grid,boardSide,shipId){
+ const board=(boardSide==='own'?state.own_board:null);
+ let cells=[];
+ if(board)board.forEach((v,i)=>{if(v===shipId)cells.push(i)});
+ else {
+   // en tablero enemigo no conocemos sus barcos: usa los impactos contiguos del evento
+   const ev=state.last_event; if(ev)cells=[ev.cell];
+ }
+ if(!cells.length)return;
+ const els=cells.map(i=>grid.children[i]).filter(Boolean);if(!els.length)return;
+ const gr=grid.getBoundingClientRect(),rects=els.map(e=>e.getBoundingClientRect());
+ const cx=rects.reduce((a,r)=>a+r.left+r.width/2,0)/rects.length-gr.left;
+ const cy=rects.reduce((a,r)=>a+r.top+r.height/2,0)/rects.length-gr.top;
+ const fx=document.createElement('div');fx.className='bn-super-explosion';fx.style.left=cx+'px';fx.style.top=cy+'px';
+ for(let k=0;k<18;k++){const sp=document.createElement('i');sp.className='bn-spark';sp.style.setProperty('--r',(k*20+Math.random()*12)+'deg');fx.appendChild(sp)}
+ grid.appendChild(fx);sunkBoomSound();setTimeout(()=>fx.remove(),1200)
+}
+function superVictory(){
+ const fx=document.getElementById('bnVictoryFx');if(!fx)return;victorySound();fx.classList.add('show');
+ for(let i=0;i<30;i++){const st=document.createElement('div');st.className='bn-victory-star';st.textContent=i%3===0?'💥':(i%2?'⭐':'✨');st.style.left=(5+Math.random()*90)+'vw';st.style.top=(5+Math.random()*80)+'vh';st.style.animationDelay=(Math.random()*.45)+'s';fx.appendChild(st);setTimeout(()=>st.remove(),2200)}
+ setTimeout(()=>fx.classList.remove('show'),3800)
+}
+function handleEvent(st){
+ const ev=st.last_event;if(!ev||!ev.seq||ev.seq===lastSeq)return;lastSeq=ev.seq;
+ shotSound();
+ if(ev.hit){setTimeout(boomSound,90);if(ev.sunk){setTimeout(()=>superExplosion(ev.attacker===st.viewer?bnEnemy:bnOwnBattle,ev.attacker===st.viewer?'enemy':'own',ev.ship_id),120)}}
+ else setTimeout(splashSound,100);
+}
+function reportProgress(){
+ const key=`${CODE}_${state.round_no}`;
+ if(playKey!==key){playKey=key;fetch('/api/progreso/jugada',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'barquitos_deluxe',code:key})}).catch(()=>{})}
+ if(state.round_over&&resultKey!==key){
+   resultKey=key;
+   const won=state.winner===state.viewer;
+   fetch('/api/progreso/resultado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'barquitos_deluxe',code:key,won,vs_cpu:state.players.some(p=>p.bot),score:state.enemy_shots.filter(x=>x===2).length})})
+   .then(r=>r.json()).then(d=>(d.new_medals||[]).forEach(m=>toast(`🏅 ${m.title} · +${m.stars} ⭐`))).catch(()=>{});
+   if(won)superVictory();
+ }
+}
+function applyState(st){
+ const oldRound=state?.round_no||0;state=st;
+ const isHost=String(st.host_id)===String(ME);
+ if(!st.configured){
+   bnSeriesModal.classList.remove('hidden');
+   bnSeriesStart.style.display=isHost?'block':'none';
+   bnLess.style.display=isHost?'inline-block':'none';bnMore.style.display=isHost?'inline-block':'none';bnTarget.style.display=isHost?'inline-block':'none';
+   bnWaitHost.style.display=isHost?'none':'block';
+   return;
+ }
+ bnSeriesModal.classList.add('hidden');
+ bnSeriesScore.textContent=`${st.players[0]?.name||'J1'} ${st.wins[0]||0} · ${st.players[1]?.name||'J2'} ${st.wins[1]||0} · A ${st.target} victoria${st.target===1?'':'s'}`;
+ if(oldRound!==st.round_no){
+   own=Array(100).fill(0);selected=null;horizontal=true;preview=[];mobilePreviewCell=null;
+   bnSetup.classList.remove('hidden');bnBattle.classList.remove('show');
+   renderPlacement();
+ }
+ const myReady=st.ready?.[st.viewer];
+ if(!myReady){
+   bnSetup.classList.remove('hidden');bnBattle.classList.remove('show');
+   bnStatus.textContent='COLOCA TU FLOTA';
+ }else if(!st.battle&&!st.round_over){
+   bnSetup.classList.remove('hidden');bnBattle.classList.remove('show');
+   bnStatus.textContent='ESPERANDO AL RIVAL';bnMessage.textContent='⏳ Tu flota está lista. Esperando a que el otro jugador termine.';
+ }else{
+   bnSetup.classList.add('hidden');bnBattle.classList.add('show');renderBattle();
+ }
+ handleEvent(st);reportProgress();
+ if(st.round_over){
+   const won=st.winner===st.viewer;
+   bnMessage.textContent=won?'🏆 ¡Has ganado esta partida!':'💥 Has perdido esta partida.';
+   if(st.champ_over){
+     bnMessage.textContent=won?'🏆 ¡ERES CAMPEÓN!':'🏆 El rival es campeón.';
+     if(isHost)setTimeout(()=>{bnSeriesModal.classList.remove('hidden')},4200);
+   }else{
+     bnMessage.textContent+=' Siguiente partida en unos segundos…';
+   }
+ }
+}
+
+bnLess.onclick=()=>bnTarget.textContent=Math.max(1,+bnTarget.textContent-1);
+bnMore.onclick=()=>bnTarget.textContent=Math.min(9,+bnTarget.textContent+1);
+bnSeriesStart.onclick=()=>socket.emit('bn_configure',{code:CODE,target:+bnTarget.textContent||1});
+
+socket.on('connect',()=>socket.emit('bn_game_join',{code:CODE}));
+socket.on('bn_state',applyState);
+socket.on('bn_error',d=>toast(d.message||'Error'));
+renderPlacement();
+})();
+</script>
+{% endblock %}

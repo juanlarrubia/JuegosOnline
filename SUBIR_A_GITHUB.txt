@@ -1,0 +1,19 @@
+JUEGOSONLINE - PAQUETE LIMPIO PARA GITHUB
+=========================================
+
+Este paquete contiene:
+- V35 completa
+- JUEGOS/
+- static/
+- templates/
+- app.py
+- configuración de Render
+- android_app/
+- .github/workflows/build-android-apk.yml
+
+NO contiene los duplicados accidentales README (n).txt ni __init__ (n).py.
+
+IMPORTANTE:
+Al subir a GitHub, entra dentro de esta carpeta y arrastra TODO SU CONTENIDO
+a la raíz del repositorio. No arrastres la carpeta contenedora como una sola
+carpeta adicional.

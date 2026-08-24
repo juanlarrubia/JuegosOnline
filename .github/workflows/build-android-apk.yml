@@ -1,0 +1,40 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'android_app/**'
+      - '.github/workflows/build-android-apk.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build debug APK
+        working-directory: android_app
+        run: gradle assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: cp android_app/app/build/outputs/apk/debug/app-debug.apk JuegosOnline-beta.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: JuegosOnline-APK
+          path: JuegosOnline-beta.apk
+          retention-days: 30

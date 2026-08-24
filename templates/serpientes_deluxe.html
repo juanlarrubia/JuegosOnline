@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+{% block title %}Serpientes y Escaleras{% endblock %}
+{% block content %}
+<style>
+.sn-shell{width:min(1100px,calc(100% - 12px));margin:6px auto 25px;color:#fff}
+.sn-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sn-head small{font-size:10px;letter-spacing:.14em;color:#ffd76a;font-weight:900}.sn-head h1{margin:0;font-size:clamp(26px,4vw,42px)}
+.sn-hud{display:grid;grid-template-columns:1.35fr .7fr .7fr;gap:7px;margin-bottom:7px}
+.sn-hud>div{background:#101b31;border:1px solid #34496c;border-radius:13px;padding:9px 11px;text-align:center;font-weight:950;font-size:11px}
+.sn-hud .active{box-shadow:0 0 0 2px #ffd747,0 0 18px #ffd74770}
+.sn-board-wrap{position:relative;width:100%;aspect-ratio:3/2;border-radius:22px;overflow:hidden;border:8px solid #5c351c;box-shadow:0 20px 55px #0009;background:#1a120d}
+.sn-board-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.sn-pawn{position:absolute;left:0;top:0;width:34px;height:42px;z-index:20;transform:translate(-50%,-54%);transition:left .18s ease,top .18s ease;filter:drop-shadow(0 5px 3px #0008)}
+.sn-pawn:before{content:"";position:absolute;left:8px;top:1px;width:18px;height:18px;border-radius:50%;background:var(--c);box-shadow:inset 3px 3px 5px #fff7,inset -4px -5px 6px #0005}
+.sn-pawn:after{content:"";position:absolute;left:5px;top:16px;width:24px;height:22px;border-radius:45% 45% 28% 28%;background:var(--c);box-shadow:inset 4px 2px 5px #fff4,inset -5px -5px 7px #0005,0 3px 3px #0007}
+.sn-pawn.blue{--c:#198cff}.sn-pawn.red{--c:#ef3b31}.sn-pawn.green{--c:#52c947}.sn-pawn.purple{--c:#954bd7}
+.sn-pawn.turn{filter:drop-shadow(0 0 7px #ffd900) drop-shadow(0 5px 3px #0008)}
+.sn-controls{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:10px}
+.sn-dice{
+ width:78px;height:78px;position:relative;
+ transform-style:preserve-3d;
+ transform:perspective(520px) rotateX(-18deg) rotateY(28deg);
+ transition:transform .18s ease;
+ filter:drop-shadow(0 14px 10px rgba(0,0,0,.42));
+}
+.sn-face{
+ position:absolute;inset:0;border-radius:13px;
+ background:linear-gradient(145deg,#fff,#f2f2f2 58%,#d4d4d4);
+ border:1px solid #bdbdbd;
+ box-shadow:inset 4px 4px 8px #fff,inset -5px -5px 9px #aaa;
+ backface-visibility:hidden;
+}
+.sn-front{
+ transform:translateZ(39px);
+ display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+ padding:13px;gap:4px;
+}
+.sn-back{transform:rotateY(180deg) translateZ(39px)}
+.sn-right{transform:rotateY(90deg) translateZ(39px)}
+.sn-left{transform:rotateY(-90deg) translateZ(39px)}
+.sn-top{transform:rotateX(90deg) translateZ(39px)}
+.sn-bottom{transform:rotateX(-90deg) translateZ(39px)}
+.sn-right:after,.sn-left:after,.sn-top:after,.sn-bottom:after,.sn-back:after{
+ content:"";position:absolute;width:13px;height:13px;border-radius:50%;
+ background:radial-gradient(circle at 32% 28%,#555,#111 48%,#000 75%);
+ left:32px;top:32px;box-shadow:inset 1px 1px 2px #777;
+}
+.sn-right:before,.sn-left:before{
+ content:"";position:absolute;width:13px;height:13px;border-radius:50%;
+ background:radial-gradient(circle at 32% 28%,#555,#111 48%,#000 75%);
+ left:15px;top:15px;box-shadow:34px 34px 0 #090909;
+}
+.sn-top:before,.sn-bottom:before{
+ content:"";position:absolute;width:13px;height:13px;border-radius:50%;
+ background:#090909;left:15px;top:15px;
+ box-shadow:34px 0 0 #090909,0 34px 0 #090909,34px 34px 0 #090909;
+}
+.sn-pip{
+ width:12px;height:12px;border-radius:50%;
+ background:radial-gradient(circle at 30% 27%,#666 0%,#202020 34%,#050505 72%,#000 100%);
+ box-shadow:inset 2px 2px 2px #777,inset -2px -2px 2px #000,0 1px 1px #fff9;
+ align-self:center;justify-self:center;
+}
+.sn-pip.off{visibility:hidden}
+.sn-dice.roll{animation:diceShake .55s ease}
+@keyframes diceShake{
+0%{transform:perspective(520px) rotateX(-18deg) rotateY(28deg) rotateZ(0)}
+18%{transform:perspective(520px) rotateX(155deg) rotateY(115deg) rotateZ(45deg) translateY(-12px)}
+38%{transform:perspective(520px) rotateX(285deg) rotateY(235deg) rotateZ(110deg) translateY(2px)}
+58%{transform:perspective(520px) rotateX(405deg) rotateY(345deg) rotateZ(170deg) translateY(-8px)}
+78%{transform:perspective(520px) rotateX(520deg) rotateY(455deg) rotateZ(225deg) translateY(1px)}
+100%{transform:perspective(520px) rotateX(342deg) rotateY(388deg) rotateZ(360deg) translateY(0)}
+}
+.sn-roll{border:0;border-radius:14px;padding:15px 22px;font-size:15px;font-weight:1000;background:linear-gradient(90deg,#ffd43b,#59dfe8);color:#07111d;box-shadow:0 8px 18px #0005}
+.sn-roll:disabled{opacity:.35}
+.sn-players{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.sn-player{display:flex;align-items:center;gap:8px;background:#101b2f;border:1px solid #314565;border-radius:12px;padding:7px 9px;font-size:10px}
+.sn-player .dot{width:16px;height:16px;border-radius:50%;background:var(--c);box-shadow:inset 2px 2px 3px #fff6}.sn-player strong{font-size:11px}
+.sn-player.turn{outline:2px solid #ffd747;box-shadow:0 0 13px #ffd74760}
+.sn-over{position:fixed;inset:0;z-index:10000;background:#020711da;display:grid;place-items:center;padding:16px}.sn-over.hidden{display:none}
+.sn-over-card{width:min(420px,100%);text-align:center;background:linear-gradient(155deg,#192b48,#0a1424);border:1px solid #5c759c;border-radius:22px;padding:24px;box-shadow:0 30px 80px #000c}
+.sn-over-card h2{font-size:29px}.sn-over-card a{display:block;text-decoration:none;margin-top:12px;padding:12px;border-radius:12px;background:linear-gradient(90deg,#ffd43b,#59dfe8);color:#06111c;font-weight:1000}
+.sn-confetti{position:fixed;top:-20px;z-index:10020;width:9px;height:15px;background:hsl(var(--h),85%,57%);animation:snfall 2.2s linear forwards}
+@keyframes snfall{to{transform:translate(var(--dx),105vh) rotate(720deg)}}
+@media(max-width:700px){
+ .sn-shell{width:100%;padding:3px}.sn-head h1{font-size:25px}.sn-hud{grid-template-columns:1fr 1fr}.sn-hud>div:first-child{grid-column:1/-1}
+ .sn-board-wrap{border-width:5px;border-radius:14px}.sn-pawn{width:24px;height:30px}.sn-pawn:before{left:6px;width:13px;height:13px}.sn-pawn:after{left:4px;top:12px;width:17px;height:16px}
+ .sn-players{grid-template-columns:1fr 1fr}.sn-dice{width:62px;height:62px}.sn-front{transform:translateZ(31px)}.sn-back{transform:rotateY(180deg) translateZ(31px)}.sn-right{transform:rotateY(90deg) translateZ(31px)}.sn-left{transform:rotateY(-90deg) translateZ(31px)}.sn-top{transform:rotateX(90deg) translateZ(31px)}.sn-bottom{transform:rotateX(-90deg) translateZ(31px)}.sn-roll{padding:12px 16px}
+}
+</style>
+
+<div class="sn-shell">
+ <header class="sn-head"><div><small>CLÁSICO · CARRERA</small><h1>🐍 Serpientes y Escaleras</h1></div><a class="back-link" href="{{url_for('juegos')}}">← Juegos</a></header>
+ <div class="sn-hud">
+   <div id="snStatus">Preparando partida…</div>
+   <div>🎲 Dado: <b id="snDiceText">—</b></div>
+   <div>🏁 Meta: <b>100</b></div>
+ </div>
+
+ <div class="sn-board-wrap" id="snBoard">
+   <img class="sn-board-img" src="{{url_for('static',filename='serpientes/tablero_serpiente.jpg')}}" alt="Tablero">
+   <div id="snPawns"></div>
+ </div>
+
+ <div id="snPlayers" class="sn-players"></div>
+
+ <div class="sn-controls">
+   <div id="snDice" class="sn-dice" aria-label="Dado">
+  <div class="sn-face sn-front">
+    <i class="sn-pip off"></i><i class="sn-pip off"></i><i class="sn-pip off"></i>
+    <i class="sn-pip off"></i><i class="sn-pip"></i><i class="sn-pip off"></i>
+    <i class="sn-pip off"></i><i class="sn-pip off"></i><i class="sn-pip off"></i>
+  </div>
+  <div class="sn-face sn-back"></div>
+  <div class="sn-face sn-right"></div>
+  <div class="sn-face sn-left"></div>
+  <div class="sn-face sn-top"></div>
+  <div class="sn-face sn-bottom"></div>
+</div>
+   <button id="snRoll" class="sn-roll">🎲 TIRAR DADO</button>
+ </div>
+</div>
+
+<div id="snOver" class="sn-over hidden">
+ <div class="sn-over-card">
+   <div style="font-size:62px">🏆</div>
+   <h2 id="snOverTitle">Partida terminada</h2>
+   <p id="snOverText"></p>
+   <a href="{{url_for('juegos')}}">VOLVER A JUEGOS</a>
+ </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+(function(){
+'use strict';
+const CODE={{codigo|tojson}},ME={{user.id|tojson}};
+const socket=io();
+const S_DICE=new Audio("{{url_for('static',filename='audio/snake_dice_real.wav')}}");
+const S_MOVE=new Audio("{{url_for('static',filename='audio/snake_move.wav')}}");
+const S_LADDER=new Audio("{{url_for('static',filename='audio/snake_ladder_real.wav')}}");
+const S_SLIDE=new Audio("{{url_for('static',filename='audio/snake_slide_real.wav')}}");
+const S_WIN=new Audio("{{url_for('static',filename='audio/snake_win.wav')}}");
+let state=null,lastSeq=0,progressPlay=false,progressResult=false,moving=false,queuedState=null;
+
+function sound(a){try{a.currentTime=0;a.volume=.8;a.play().catch(()=>{});}catch(e){}}
+
+// Coordenadas calibradas para el TABLERO DEFINITIVO.
+// La posición 0 es la salida, fuera de la casilla 1.
+// Del 1 al 100 se sigue el recorrido serpenteante fila por fila.
+function buildCells(){
+ const out={};
+
+ // SALIDA: antes del 1, para que ninguna ficha empiece ya dentro de la casilla 1.
+ out[0]=[11.8,86.7];
+
+ // Centros de las 10 columnas del rectángulo de juego.
+ const xs=[17.8,25.7,33.6,41.5,49.4,57.3,65.2,73.1,81.0,88.9];
+ // Centros un poco más ajustados al centro visual de cada casilla.
+ const ys=[86.7,78.0,69.3,60.6,51.9,43.2,34.5,25.8,17.1,8.6];
+
+ for(let row=0;row<10;row++){
+   for(let col=0;col<10;col++){
+     const n=row*10+col+1;
+     const realCol=(row%2===0)?col:(9-col);
+     out[n]=[xs[realCol],ys[row]];
+   }
+ }
+ return out;
+}
+const CELL=buildCells();
+
+function pawnHtml(i){
+ const p=state.players[i],pos=state.positions[i],c=state.colors[i],xy=(CELL[pos]||CELL[0]);
+ return `<div class="sn-pawn ${c} ${state.turn===i?'turn':''}" data-seat="${i}" style="left:${xy[0]}%;top:${xy[1]}%" title="${p.name}"></div>`;
+}
+function renderPlayers(){
+ snPlayers.innerHTML=state.players.map((p,i)=>{
+   const c=state.colors[i];
+   return `<div class="sn-player ${state.turn===i?'turn':''}" style="--c:${c==='blue'?'#198cff':c==='red'?'#ef3b31':c==='green'?'#52c947':'#954bd7'}">
+     <span class="dot"></span><div><strong>${p.bot?'🤖 ':''}${p.name}</strong><br>Casilla ${state.positions[i]} · ⭐ ${p.stars||0}</div>
+   </div>`;
+ }).join('');
+}
+function render(){
+ if(!state)return;
+ snPawns.innerHTML=state.players.map((p,i)=>pawnHtml(i)).join('');
+ renderPlayers();
+ const turn=state.players[state.turn];
+ snStatus.textContent=state.over?'🏁 PARTIDA TERMINADA':(state.message||('Turno de '+turn.name));
+ snDiceText.textContent=state.dice||'—';
+ if(state.dice)setDiceFace(state.dice);
+ snRoll.disabled=moving||state.over||String(state.players[state.turn].id)!==String(ME);
+ if(state.over){
+   const w=state.players[state.winner];
+   snOverTitle.textContent=state.winner===state.players.findIndex(p=>String(p.id)===String(ME))?'🎉 ¡HAS GANADO!':'🏆 '+w.name+' gana';
+   snOverText.textContent='Ha llegado a la casilla 100.';
+   snOver.classList.remove('hidden');
+   if(!progressResult){
+     progressResult=true;
+     const my=state.players.findIndex(p=>String(p.id)===String(ME));
+     const vsCpu=state.players.some((p,i)=>i!==my&&p.bot);
+     fetch('/api/progreso/resultado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'serpientes_deluxe',code:CODE,won:state.winner===my,vs_cpu:vsCpu,score:100})}).catch(()=>{});
+   }
+ }
+ if(!progressPlay){
+   progressPlay=true;
+   fetch('/api/progreso/jugada',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'serpientes_deluxe',code:CODE})}).catch(()=>{});
+ }
+}
+const DICE_PIPS={
+ 1:[4],
+ 2:[0,8],
+ 3:[0,4,8],
+ 4:[0,2,6,8],
+ 5:[0,2,4,6,8],
+ 6:[0,2,3,5,6,8]
+};
+function setDiceFace(n){
+ const on=DICE_PIPS[n]||[];
+ [...snDice.querySelectorAll('.sn-front .sn-pip')].forEach((p,i)=>p.classList.toggle('off',!on.includes(i)));
+}
+function animateDice(finalValue,done){
+ sound(S_DICE);
+ snDice.classList.remove('roll');void snDice.offsetWidth;snDice.classList.add('roll');
+ let ticks=0;
+ const timer=setInterval(()=>{
+   setDiceFace(1+Math.floor(Math.random()*6));
+   ticks++;
+   if(ticks>=10){
+     clearInterval(timer);
+     setDiceFace(finalValue);
+     snDiceText.textContent=finalValue;
+     if(done)setTimeout(done,80);
+   }
+ },80);
+}
+function finishMoveAnimation(){
+ moving=false;
+ snRoll.disabled=state.over||String(state.players[state.turn].id)!==String(ME);
+ if(queuedState){
+   const q=queuedState;
+   queuedState=null;
+   processSnakeState(q);
+ }
+}
+
+function animateMove(old,d){
+ const mv=d.last_move;
+ if(!mv||mv.seq===lastSeq){render();finishMoveAnimation();return;}
+ lastSeq=mv.seq;
+ moving=true;
+ snRoll.disabled=true;
+
+ // IMPORTANT: render the OLD positions first, so CPU and human
+ // both visibly travel from the square where they really were.
+ state=old;
+ render();
+ state=d;
+
+ const pawn=document.querySelector(`.sn-pawn[data-seat="${mv.seat}"]`);
+ animateDice(mv.dice,()=>{
+   if(!pawn){
+     render();
+     finishMoveAnimation();
+     return;
+   }
+
+   const endNormal=Math.min(100,mv.from+mv.dice);
+   const steps=[];
+   for(let n=mv.from+1;n<=endNormal;n++)steps.push(n);
+   let idx=0;
+
+   function next(){
+     if(idx<steps.length){
+       const n=steps[idx++],xy=CELL[n];
+       pawn.style.left=xy[0]+'%';
+       pawn.style.top=xy[1]+'%';
+       sound(S_MOVE);
+       setTimeout(next,390);
+       return;
+     }
+
+     if(mv.special){
+       setTimeout(()=>{
+         const xy=CELL[mv.to];
+         pawn.style.transition='left .72s ease,top .72s ease';
+         pawn.style.left=xy[0]+'%';
+         pawn.style.top=xy[1]+'%';
+         sound(mv.special==='ladder'?S_LADDER:S_SLIDE);
+         setTimeout(()=>{
+           pawn.style.transition='';
+           render();
+           setTimeout(finishMoveAnimation,450);
+         },850);
+       },500);
+     }else{
+       render();
+       setTimeout(finishMoveAnimation,650);
+     }
+   }
+   next();
+ });
+}
+function confetti(){
+ for(let i=0;i<45;i++){
+   const e=document.createElement('i');e.className='sn-confetti';e.style.left=(Math.random()*100)+'vw';
+   e.style.setProperty('--h',Math.floor(Math.random()*360));e.style.setProperty('--dx',((Math.random()-.5)*220)+'px');
+   e.style.animationDelay=(Math.random()*.35)+'s';document.body.appendChild(e);setTimeout(()=>e.remove(),2700);
+ }
+}
+snRoll.onclick=()=>{
+ if(moving||snRoll.disabled)return;
+ snRoll.disabled=true;
+ socket.emit('snake_roll',{code:CODE});
+};
+socket.on('connect',()=>socket.emit('snake_game_join',{code:CODE}));
+function processSnakeState(d){
+ const old=state;
+
+ // If another network update arrives while a pawn is still moving,
+ // keep it queued. This prevents CPU movement from being skipped.
+ if(moving){
+   queuedState=d;
+   return;
+ }
+
+ if(!old){
+   state=d;
+   render();
+ }else if(d.last_move && d.last_move.seq!==lastSeq){
+   animateMove(old,d);
+ }else{
+   state=d;
+   render();
+ }
+
+ if(d.over&&(!old||!old.over)){
+   sound(S_WIN);
+   confetti();
+ }
+}
+socket.on('snake_state',processSnakeState);
+})();
+</script>
+{% endblock %}

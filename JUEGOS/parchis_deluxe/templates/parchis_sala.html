@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Sala Parchís {{ codigo }}{% endblock %}
+{% block content %}
+<header class="topbar"><div class="brand-mini"><span>🎲</span><strong>PARCHÍS DELUXE</strong></div><a class="back-link" href="{{ url_for('juegos') }}">← Juegos</a></header>
+<section class="parchis-lobby-hero"><div><span class="eyebrow">SALA DE PARCHÍS</span><h1>Prepara la partida</h1><p>2 a 4 jugadores. Con 2, cada jugador controla dos colores.</p></div><div class="room-code-box"><small>CÓDIGO</small><strong>{{ codigo }}</strong></div></section>
+<div class="card panel"><div class="panel-head"><div><span class="eyebrow">JUGADORES</span><h3><span id="count">1</span> / 4</h3></div></div><div id="players" class="parchis-player-grid"></div>
+<div class="parchis-rule-card">🎨 <div><strong>Con 2 jugadores</strong><small>Jugador 1: rojo + verde · Jugador 2: azul + amarillo</small></div></div>
+{% if user.id == sala.host_id %}<button class="parchis-start" onclick="socket.emit('parchis_start',{code:CODE})">🎲 EMPEZAR PARTIDA</button>{% else %}<div class="waiting-banner">Esperando al anfitrión…</div>{% endif %}</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script><script>
+const socket=io(),CODE="{{ codigo }}";
+socket.on("connect",()=>socket.emit("parchis_join_lobby",{code:CODE}));
+socket.on("parchis_lobby_state",d=>{document.getElementById("count").textContent=d.players.length;document.getElementById("players").innerHTML=d.players.map(p=>`<div class="parchis-player-card"><div class="parchis-avatar">${p.name[0].toUpperCase()}</div><strong>${p.name}</strong><small>${p.id===d.host_id?'👑 ANFITRIÓN':'LISTO'}</small></div>`).join("")});
+socket.on("parchis_started",d=>location.href="/parchis/"+d.code);socket.on("app_error",d=>alert(d.message));
+</script>{% endblock %}

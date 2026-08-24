@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+{% block title %}Dobble Arena{% endblock %}
+{% block content %}
+<style>
+.db-shell{width:min(980px,calc(100% - 12px));margin:6px auto 26px;color:#fff}
+.db-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.db-head h1{margin:0;font-size:clamp(28px,5vw,44px)}
+.db-head small{font-size:9px;letter-spacing:.16em;color:#88def7;font-weight:1000}
+.db-score{
+ display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#111d32;
+ border:1px solid #304566;border-radius:15px;padding:10px 14px;margin:7px 0
+}
+.db-player{display:flex;align-items:center;gap:8px;font-weight:1000}
+.db-player b{font-size:12px}.db-player strong{font-size:29px;color:#ffd44b;line-height:1}
+.db-player.right{justify-content:flex-end;text-align:right}
+.db-series{text-align:center;font-size:9px;color:#ffdc65;font-weight:1000;margin:5px 0}
+.db-msg{
+ width:min(760px,96%);margin:9px auto;background:#14233a;border:1px solid #334b6e;
+ border-radius:13px;text-align:center;padding:9px 12px;font-size:11px;font-weight:900
+}
+.db-stage{display:grid;grid-template-columns:minmax(0,1fr) 42px minmax(0,1fr);align-items:center;gap:10px;margin-top:10px}
+.db-vs{text-align:center;font-size:18px;font-weight:1000}
+.db-card{
+ width:min(100%,410px);aspect-ratio:1/1;border-radius:50%;margin:auto;
+ background:radial-gradient(circle at 42% 38%,#fff 0 62%,#f0f0f0 63% 82%,#d9d9d9 83% 100%);
+ border:8px solid #efefef;box-shadow:0 14px 32px #0008,inset 0 0 18px #fff;
+ position:relative;overflow:hidden
+}
+.db-symbol{
+ position:absolute;width:23%;height:23%;border:0;background:transparent;
+ display:grid;place-items:center;font-size:clamp(29px,5vw,54px);
+ cursor:pointer;transform:translate(-50%,-50%);
+ transition:transform .1s ease,filter .1s ease;line-height:1
+}
+.db-symbol:hover{transform:translate(-50%,-50%) scale(1.14);filter:drop-shadow(0 3px 3px #0004)}
+.db-symbol:active{transform:translate(-50%,-50%) scale(.92)}
+.db-symbol.cpu-side{cursor:default;pointer-events:none}
+.db-card.flash-good{animation:dbGood .42s ease}
+.db-card.flash-bad{animation:dbBad .42s ease}
+@keyframes dbGood{50%{box-shadow:0 0 42px #3bff87,inset 0 0 32px #5dff9b;border-color:#76ffad}}
+@keyframes dbBad{50%{box-shadow:0 0 42px #ff3d4f,inset 0 0 32px #ff6570;border-color:#ff5c68}}
+.db-modal{
+ position:fixed;inset:0;z-index:10000;background:#030914e8;display:grid;place-items:center;padding:16px
+}
+.db-modal.hidden{display:none}
+.db-modal-card{
+ width:min(420px,100%);background:#13233b;border:1px solid #506c91;border-radius:22px;
+ padding:24px;text-align:center;box-shadow:0 20px 60px #000b
+}
+.db-modal-card h2{margin:5px 0 8px}.db-modal-card p{font-size:11px;color:#d2dfef}
+.db-pick{display:flex;justify-content:center;align-items:center;gap:14px;margin:16px 0}
+.db-pick button{width:44px;height:44px;border:0;border-radius:11px;font-size:24px;font-weight:1000}
+.db-pick strong{font-size:36px;min-width:48px}
+.db-start{width:100%;border:0;border-radius:13px;padding:13px;background:linear-gradient(90deg,#ffd43b,#59dfe8);color:#07111d;font-weight:1000}
+.db-over{position:fixed;inset:0;z-index:9999;background:#020710dd;display:grid;place-items:center;padding:16px}
+.db-over.hidden{display:none}
+.db-over-card{width:min(420px,100%);text-align:center;background:#14233b;border:1px solid #577297;border-radius:22px;padding:24px}
+.db-over-card h2{font-size:30px;margin:6px 0}.db-over-card p{font-size:12px}
+.db-over-card button,.db-over-card a{display:block;width:100%;box-sizing:border-box;margin-top:10px;padding:12px;border:0;border-radius:12px;background:linear-gradient(90deg,#ffd43b,#59dfe8);color:#07111d;font-weight:1000;text-decoration:none}
+.db-toast{position:fixed;left:50%;top:15px;transform:translateX(-50%);z-index:15000;background:#172842;border:1px solid #587396;border-radius:12px;padding:10px 14px;font-size:11px;font-weight:900;box-shadow:0 10px 35px #0009}
+@media(max-width:700px){
+ .db-shell{width:100%;padding:2px;margin:0 auto 18px}
+ .db-head{padding:0 4px}.db-head h1{font-size:25px}.db-score{gap:5px;padding:7px 9px}
+ .db-player b{font-size:9px}.db-player strong{font-size:23px}.db-msg{font-size:9px;padding:7px}
+ .db-stage{grid-template-columns:1fr;gap:5px}.db-vs{font-size:12px}
+ .db-card{width:min(90vw,440px);border-width:6px}
+ .db-symbol{width:24%;height:24%;font-size:clamp(31px,10vw,54px)}
+}
+
+#dbRoundFx{
+ position:fixed;inset:0;z-index:12000;display:none;overflow:hidden;
+ background:radial-gradient(circle at 50% 45%,rgba(70,210,255,.22),transparent 34%),rgba(2,7,18,.88);
+ align-items:center;justify-content:center;pointer-events:none
+}
+#dbRoundFx.show{display:flex;animation:dbFxFade .25s ease-out both}
+.db-round-card{
+ position:relative;z-index:5;width:min(440px,88vw);padding:26px 22px;text-align:center;
+ border-radius:28px;background:linear-gradient(145deg,#172a46,#0d1728);
+ border:3px solid #ffd84b;box-shadow:0 0 45px #46d8ff66,0 20px 70px #000b;
+ animation:dbFxPop .72s cubic-bezier(.2,.9,.25,1.2) both
+}
+.db-round-icon{font-size:clamp(72px,17vw,140px);line-height:1;animation:dbFxBounce .8s ease-in-out infinite alternate}
+.db-round-title{font-size:clamp(30px,7vw,58px);font-weight:1000;color:#ffe45a;text-shadow:0 3px 0 #9a5e00;margin-top:6px}
+.db-round-sub{font-size:clamp(14px,3.6vw,24px);font-weight:900;color:#dff8ff;margin-top:8px}
+.db-fx-star{
+ position:absolute;z-index:2;font-size:clamp(18px,4vw,36px);
+ animation:dbFxStar 1.6s ease-out forwards
+}
+@keyframes dbFxFade{from{opacity:0}to{opacity:1}}
+@keyframes dbFxPop{from{transform:scale(.25) rotate(-6deg);opacity:0}70%{transform:scale(1.08) rotate(2deg)}to{transform:scale(1);opacity:1}}
+@keyframes dbFxBounce{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-12px) rotate(4deg)}}
+@keyframes dbFxStar{0%{transform:scale(.1) rotate(0);opacity:0}25%{opacity:1}100%{transform:scale(1.8) rotate(300deg);opacity:0}}
+
+
+.db-card{
+ transform-style:preserve-3d;
+ transition:transform .28s ease,box-shadow .28s ease;
+}
+.db-card.preparing{
+ background:
+   radial-gradient(circle at 50% 50%,#203b67 0 15%,transparent 16%),
+   repeating-radial-gradient(circle at 50% 50%,#17315a 0 14px,#224a7b 15px 28px,#102746 29px 42px);
+ border-color:#f3d45e;
+ box-shadow:0 14px 32px #0009,inset 0 0 0 7px #0f294d,inset 0 0 0 12px #e6c94f;
+ animation:dbBackPulse .7s ease-in-out infinite alternate;
+}
+.db-card.preparing::before{
+ content:"🎯";
+ position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+ font-size:clamp(62px,11vw,108px);
+ filter:drop-shadow(0 5px 6px #0008);
+}
+.db-card.preparing::after{
+ content:"DOBBLE";
+ position:absolute;left:50%;top:72%;transform:translateX(-50%);
+ font-size:clamp(12px,2.6vw,22px);font-weight:1000;letter-spacing:.15em;
+ color:#ffe36a;text-shadow:0 2px 3px #000;
+}
+.db-card.reveal{
+ animation:dbRevealCard .46s cubic-bezier(.2,.8,.25,1) both;
+}
+@keyframes dbBackPulse{
+ from{transform:scale(.985);filter:brightness(.92)}
+ to{transform:scale(1.015);filter:brightness(1.08)}
+}
+@keyframes dbRevealCard{
+ 0%{transform:rotateY(90deg) scale(.94);opacity:.25}
+ 58%{transform:rotateY(-8deg) scale(1.03);opacity:1}
+ 100%{transform:rotateY(0) scale(1);opacity:1}
+}
+
+</style>
+
+
+<div id="dbRoundFx">
+ <div class="db-round-card">
+  <div id="dbRoundIcon" class="db-round-icon">🎉</div>
+  <div id="dbRoundTitle" class="db-round-title">¡PARTIDA!</div>
+  <div id="dbRoundSub" class="db-round-sub"></div>
+ </div>
+</div>
+
+<div id="dbSetup" class="db-modal">
+ <div class="db-modal-card">
+  <div style="font-size:55px">🏆</div>
+  <h2>Campeonato Dobble Arena</h2>
+  <p>¿Cuántas partidas hay que ganar para ser campeón?</p>
+  <div class="db-pick">
+   <button id="dbLess" type="button">−</button>
+   <strong id="dbTarget">1</strong>
+   <button id="dbMore" type="button">+</button>
+  </div>
+  <button id="dbStart" class="db-start" type="button">EMPEZAR CAMPEONATO</button>
+  <p id="dbWaitHost" style="display:none">⏳ Esperando al anfitrión…</p>
+ </div>
+</div>
+
+<div id="dbOver" class="db-over hidden">
+ <div class="db-over-card">
+  <div style="font-size:55px">🎉</div>
+  <h2 id="dbOverTitle">Partida terminada</h2>
+  <p id="dbOverText"></p>
+  <button id="dbNewChamp" type="button" style="display:none">NUEVO CAMPEONATO</button>
+  <a href="{{url_for('juegos')}}">SALIR AL MENÚ</a>
+ </div>
+</div>
+
+<div class="db-shell">
+ <header class="db-head"><div><small>VELOCIDAD · OBSERVACIÓN</small><h1>🎯 Dobble Arena</h1></div><a class="back-link" href="{{url_for('juegos')}}">← Juegos</a></header>
+ <div class="db-score">
+   <div class="db-player"><b id="dbName0">JUGADOR 1</b><strong id="dbScore0">0</strong></div>
+   <div class="db-player right"><b id="dbName1">JUGADOR 2</b><strong id="dbScore1">0</strong></div>
+ </div>
+ <div id="dbSeries" class="db-series">A 1 victoria · Primera partida</div>
+ <div id="dbMsg" class="db-msg">Encuentra el único símbolo común.</div>
+ <div class="db-stage">
+   <div id="dbCard0" class="db-card"></div>
+   <div class="db-vs">VS</div>
+   <div id="dbCard1" class="db-card"></div>
+ </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+(()=>{
+const CODE={{codigo|tojson}},ME={{user.id|tojson}},socket=io();
+let state=null,lastSeq=0,resultRound=0,playRound=0,cardsPreparing=false,cardTransitionToken=0,lastRoundSeen=0;
+const POS=[
+ [18,20],[50,16],[80,22],
+ [22,49],[50,46],[78,49],
+ [29,77],[67,76]
+];
+const AC=window.AudioContext||window.webkitAudioContext;let ac;
+
+function tone(freq,dur,type='sine',vol=.11){
+ try{
+  ac=ac||new AC();const o=ac.createOscillator(),g=ac.createGain();
+  o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(vol,ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);
+  o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur)
+ }catch(e){}
+}
+function soundGood(){tone(660,.10,'sine',.11);setTimeout(()=>tone(880,.16,'sine',.10),80)}
+function soundBad(){tone(170,.20,'sawtooth',.10);setTimeout(()=>tone(110,.24,'square',.07),90)}
+function soundPointOther(){tone(260,.10,'triangle',.08);setTimeout(()=>tone(210,.16,'triangle',.07),90)}
+function soundWin(){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.25,'triangle',.11),i*120))}
+
+let dbFxRoundShown=0;
+function showRoundFx(won,champion,name){
+ const fx=document.getElementById('dbRoundFx');if(!fx)return;
+ dbRoundIcon.textContent=champion?(won?'🏆':'👑'):(won?'🎉':'😵');
+ dbRoundTitle.textContent=champion?(won?'¡CAMPEÓN!':`${name} CAMPEÓN`):(won?'¡PARTIDA GANADA!':`${name} GANA`);
+ dbRoundSub.textContent=champion?'Campeonato terminado':'Siguiente partida en unos segundos…';
+ fx.classList.add('show');
+ for(let i=0;i<24;i++){
+   const st=document.createElement('div');
+   st.className='db-fx-star';
+   st.textContent=i%3===0?'✨':(i%2?'⭐':'🎯');
+   st.style.left=(5+Math.random()*90)+'vw';
+   st.style.top=(5+Math.random()*82)+'vh';
+   st.style.animationDelay=(Math.random()*.35)+'s';
+   fx.appendChild(st);
+   setTimeout(()=>st.remove(),1900);
+ }
+ if(won)soundWin(); else soundPointOther();
+ setTimeout(()=>fx.classList.remove('show'),2800);
+}
+
+function toast(t){const e=document.createElement('div');e.className='db-toast';e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),3200)}
+
+function mySeat(){
+ if(!state)return -1;
+ return state.players.findIndex(p=>String(p.id)===String(ME));
+}
+
+function showCardBacks(){
+ cardsPreparing=true;
+ [dbCard0,dbCard1].forEach(el=>{
+   el.classList.remove('reveal','flash-good','flash-bad');
+   el.classList.add('preparing');
+   el.innerHTML='';
+ });
+ dbMsg.textContent='🃏 Preparando nuevas cartas…';
+}
+function revealBothCards(st){
+ const seat=mySeat();
+ const other=seat===0?1:0;
+ [dbCard0,dbCard1].forEach(el=>{
+   el.classList.remove('preparing','reveal');
+   void el.offsetWidth;
+ });
+ renderCard(dbCard0,st.cards[seat],!st.round_over,seat);
+ renderCard(dbCard1,st.cards[other],false,other);
+ dbCard0.classList.add('reveal');
+ dbCard1.classList.add('reveal');
+ cardsPreparing=false;
+ if(!st.round_over)dbMsg.textContent='🎯 ¡YA! Encuentra el símbolo común.';
+ setTimeout(()=>{
+   dbCard0.classList.remove('reveal');
+   dbCard1.classList.remove('reveal');
+ },520);
+}
+function prepareAndReveal(st,delay=560){
+ const token=++cardTransitionToken;
+ showCardBacks();
+ setTimeout(()=>{
+   if(token!==cardTransitionToken || state!==st || st.round_over)return;
+   revealBothCards(st);
+ },delay);
+}
+
+function renderCard(el,symbols,clickable,seat){
+ el.innerHTML=(symbols||[]).map((v,i)=>{
+   const p=POS[i%POS.length];
+   return `<button class="db-symbol ${clickable?'':'cpu-side'}" style="left:${p[0]}%;top:${p[1]}%" data-s="${v}" ${clickable?'':'disabled'}>${v}</button>`
+ }).join('');
+ if(clickable){
+   el.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>socket.emit('dobble_pick',{code:CODE,symbol:b.dataset.s}));
+ }
+}
+function reportProgress(){
+ if(!state||!state.configured)return;
+ if(playRound!==state.round_no){
+   playRound=state.round_no;
+   fetch('/api/progreso/jugada',{method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({game:'dobble_deluxe',code:CODE+'_r'+state.round_no})})
+   .then(r=>r.json()).then(d=>(d.new_medals||[]).forEach(m=>toast(`🏅 ${m.title} · +${m.stars} ⭐`))).catch(()=>{});
+ }
+ if(state.round_over&&resultRound!==state.round_no){
+   resultRound=state.round_no;
+   const seat=mySeat(),won=seat===state.winner;
+   fetch('/api/progreso/resultado',{method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({game:'dobble_deluxe',code:CODE+'_r'+state.round_no,won,vs_cpu:state.players.some(p=>p.bot),score:state.scores[seat]||0})})
+   .then(r=>r.json()).then(d=>(d.new_medals||[]).forEach(m=>toast(`🏅 ${m.title} · +${m.stars} ⭐`))).catch(()=>{});
+ }
+}
+function animateEvent(st){
+ const ev=st.last_event;if(!ev||ev.seq===lastSeq)return;
+ lastSeq=ev.seq;
+ const seat=mySeat();
+ const pickedCard=ev.picker===seat?dbCard0:dbCard1;
+ pickedCard.classList.remove('flash-good','flash-bad');void pickedCard.offsetWidth;
+ pickedCard.classList.add(ev.correct?'flash-good':'flash-bad');
+ if(ev.picker===seat){
+   if(ev.correct){soundGood();dbMsg.textContent='✅ ¡Correcto! Punto para ti.'}
+   else{soundBad();dbMsg.textContent='❌ Fallo. Punto para el rival.'}
+ }else{
+   if(ev.correct){soundPointOther();dbMsg.textContent=`✅ ${st.players[ev.picker].name} acertó.`}
+   else{soundGood();dbMsg.textContent=`❌ ${st.players[ev.picker].name} falló. Punto para ti.`}
+ }
+}
+function render(){
+ if(!state)return;
+ const seat=mySeat();
+ const other=seat===0?1:0;
+ const isHost=String(state.host_id)===String(ME);
+
+ dbName0.textContent=state.players[seat]?.name||'TÚ';
+ dbName1.textContent=state.players[other]?.name||'RIVAL';
+ dbScore0.textContent=state.scores[seat]||0;
+ dbScore1.textContent=state.scores[other]||0;
+ dbSeries.textContent=`${state.players[0]?.name||'J1'} ${state.wins[0]||0} · ${state.players[1]?.name||'J2'} ${state.wins[1]||0} · A ${state.target} victoria${state.target===1?'':'s'} · Partida ${state.round_no}`;
+
+ if(!state.configured){
+   dbSetup.classList.remove('hidden');
+   dbStart.style.display=isHost?'block':'none';
+   dbLess.style.display=isHost?'inline-block':'none';
+   dbMore.style.display=isHost?'inline-block':'none';
+   dbTarget.style.display=isHost?'inline-block':'none';
+   dbWaitHost.style.display=isHost?'none':'block';
+   return;
+ }
+ dbSetup.classList.add('hidden');
+
+ if(!cardsPreparing){
+   renderCard(dbCard0,state.cards[seat],!state.round_over,seat);
+   renderCard(dbCard1,state.cards[other],false,other);
+ }
+
+ if(!state.round_over){
+   dbOver.classList.add('hidden');
+   if(!state.last_event)dbMsg.textContent='Encuentra el único símbolo común.';
+ }else{
+   const winner=state.players[state.winner];
+   const won=seat===state.winner;
+   dbOverTitle.textContent=state.champ_over
+     ?(won?'🏆 ¡ERES CAMPEÓN!':`🏆 ${winner.name} ES CAMPEÓN`)
+     :(won?'🎉 ¡HAS GANADO LA PARTIDA!':`🏆 ${winner.name} gana la partida`);
+   dbOverText.textContent=`Marcador del campeonato: ${state.players[0].name} ${state.wins[0]} · ${state.players[1].name} ${state.wins[1]}`;
+   dbNewChamp.style.display=state.champ_over&&isHost?'block':'none';
+   dbOver.classList.remove('hidden');
+
+   if(dbFxRoundShown!==state.round_no){
+     dbFxRoundShown=state.round_no;
+     showRoundFx(won,state.champ_over,winner.name);
+   }
+ }
+ reportProgress();
+}
+function applyState(st){
+ const previous=state;
+ const eventChanged=!!(st.last_event && (!previous || st.last_event.seq!==previous.last_event?.seq));
+ const newRound=st.configured && st.round_no!==lastRoundSeen;
+
+ state=st;
+ animateEvent(st);
+ render();
+
+ if(newRound){
+   lastRoundSeen=st.round_no;
+   if(!st.round_over)prepareAndReveal(st,650);
+ }else if(eventChanged && !st.round_over){
+   // Tras una elección: pequeña pausa, reversos y descubrimiento simultáneo.
+   prepareAndReveal(st,560);
+ }
+}
+dbLess.onclick=()=>dbTarget.textContent=Math.max(1,+dbTarget.textContent-1);
+dbMore.onclick=()=>dbTarget.textContent=Math.min(9,+dbTarget.textContent+1);
+dbStart.onclick=()=>socket.emit('dobble_configure',{code:CODE,target:+dbTarget.textContent||1});
+dbNewChamp.onclick=()=>{dbOver.classList.add('hidden');socket.emit('dobble_new_championship',{code:CODE})};
+
+socket.on('connect',()=>socket.emit('dobble_game_join',{code:CODE}));
+socket.on('dobble_state',applyState);
+socket.on('app_error',d=>toast(d.message||'Error'));
+})();
+</script>
+{% endblock %}

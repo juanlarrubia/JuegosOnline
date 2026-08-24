@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Ajustes · Juegos Online{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="brand-mini"><span>⚙</span><strong>AJUSTES</strong></div>
+  <a class="back-link" href="{{ url_for('menu') }}">← Menú principal</a>
+</header>
+
+<section class="settings-hero">
+  <span class="eyebrow">TU CUENTA</span>
+  <h1>Personaliza tu experiencia</h1>
+  <p>Los cambios se guardan en tu usuario y se mantienen la próxima vez que entres.</p>
+</section>
+
+<section class="settings-grid">
+  <div class="card panel settings-card wide">
+    <div class="panel-head"><div><span class="eyebrow">APARIENCIA</span><h3>Temas de color</h3></div></div>
+    <form method="post">
+      <input type="hidden" name="section" value="appearance">
+      <div class="theme-grid">
+        {% for key, label in themes.items() %}
+        <label class="theme-option theme-preview-{{ key }}">
+          <input type="radio" name="theme" value="{{ key }}" {% if user.theme == key %}checked{% endif %}>
+          <span class="theme-swatch"><i></i></span>
+          <strong>{{ label }}</strong>
+          <small>{% if user.theme == key %}Tema actual{% else %}Seleccionar{% endif %}</small>
+        </label>
+        {% endfor %}
+      </div>
+
+      <div class="settings-row-group">
+        <div>
+          <span class="eyebrow">AVATAR</span>
+          <h3>Estilo de avatar</h3>
+        </div>
+        <div class="avatar-options">
+          {% for value, icon, label in [('inicial','J','Inicial'),('rayo','⚡','Rayo'),('mando','🎮','Mando'),('robot','🤖','Robot')] %}
+          <label>
+            <input type="radio" name="avatar_style" value="{{ value }}" {% if user.avatar_style == value %}checked{% endif %}>
+            <span>{{ icon }}</span><small>{{ label }}</small>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <label class="switch-line">
+        <input type="checkbox" name="sound_enabled" {% if user.sound_enabled %}checked{% endif %}>
+        <span class="switch"></span>
+        <div><strong>Sonidos del juego</strong><small>Preparado para efectos y avisos cuando los añadamos.</small></div>
+      </label>
+
+      <button class="primary save-settings" type="submit">GUARDAR APARIENCIA</button>
+    </form>
+  </div>
+
+  <div class="card panel settings-card">
+    <span class="eyebrow">PERFIL</span>
+    <h3>Datos de la cuenta</h3>
+    <form method="post">
+      <input type="hidden" name="section" value="profile">
+      <label>Nombre de usuario</label>
+      <input value="{{ user.username }}" disabled>
+      <small class="field-help">Es único y se usa para encontrarte como amigo.</small>
+
+      <label>Nombre visible</label>
+      <input name="display_name" maxlength="30" value="{{ user.display_name or user.username }}" placeholder="Cómo quieres aparecer">
+
+      <label>Correo electrónico</label>
+      <input name="email" type="email" required value="{{ user.email or '' }}" placeholder="tu@correo.com">
+
+      <button class="primary" type="submit">GUARDAR PERFIL</button>
+    </form>
+  </div>
+
+  <div class="card panel settings-card">
+    <span class="eyebrow">SEGURIDAD</span>
+    <h3>Cambiar contraseña</h3>
+    <form method="post">
+      <input type="hidden" name="section" value="password">
+      <label>Contraseña actual</label>
+      <input name="current_password" type="password" required autocomplete="current-password">
+
+      <label>Nueva contraseña</label>
+      <input name="new_password" type="password" required minlength="6" autocomplete="new-password">
+
+      <label>Repetir nueva contraseña</label>
+      <input name="new_password2" type="password" required minlength="6" autocomplete="new-password">
+
+      <button class="primary" type="submit">CAMBIAR CONTRASEÑA</button>
+    </form>
+  </div>
+
+  <div class="card panel settings-card">
+    <span class="eyebrow">CUENTA</span>
+    <h3>Opciones útiles</h3>
+    <div class="feature-list">
+      <div><span>📧</span><div><strong>Correo asociado</strong><small>La cuenta queda identificada por usuario + correo.</small></div></div>
+      <div><span>🎨</span><div><strong>Tema persistente</strong><small>Se guarda en la base de datos, no solo en este navegador.</small></div></div>
+      <div><span>🔒</span><div><strong>Contraseña protegida</strong><small>Se almacena mediante hash.</small></div></div>
+      <div><span>☁️</span><div><strong>Preparado para varios equipos</strong><small>Cuando publiquemos el servidor, entrarás con la misma cuenta desde cualquier dispositivo.</small></div></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
