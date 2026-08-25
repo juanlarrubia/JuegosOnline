@@ -379,7 +379,39 @@ speed.addEventListener("input",()=>{document.getElementById("speedText").textCon
 speed.addEventListener("change",()=>socket.emit("bingo_set_speed",{code:CODE,speed:Number(speed.value)}));
 function togglePause(){socket.emit("bingo_toggle_pause",{code:CODE})}
 {% else %}function togglePause(){}{% endif %}
-function restartBingo(){socket.emit("bingo_restart",{code:CODE});}
+function restartBingo(){
+  bingoEndAction("restart");
+}
+function bingoEndAction(action){
+
+  if(window.AndroidAds){
+
+    window.AndroidAds.partidaTerminada();
+
+    /*
+     * El anuncio se muestra después de pulsar
+     * el botón final.
+     */
+    setTimeout(function(){
+
+      if(action==="menu"){
+        location.href="/menu";
+      }else{
+        socket.emit("bingo_restart",{code:CODE});
+      }
+
+    },700);
+
+  }else{
+
+    if(action==="menu"){
+      location.href="/menu";
+    }else{
+      socket.emit("bingo_restart",{code:CODE});
+    }
+
+  }
+}
 function showGameOver(d){
   // Ocultamos cualquier verificación abierta.
   document.querySelectorAll(".bingo-verify-modal,.prize-splash").forEach(e=>e.remove());
@@ -416,7 +448,7 @@ function showGameOver(d){
         ${isHost
           ? `<button class="start-button replay" onclick="restartBingo()">🔁 REPETIR PARTIDA</button>`
           : `<button class="start-button replay" disabled>⏳ ESPERANDO AL ANFITRIÓN</button>`}
-        <button class="start-button menu-end" onclick="location.href='/menu'">🏠 MENÚ PRINCIPAL</button>
+<button class="start-button menu-end" onclick="bingoEndAction('menu')">🏠 MENÚ PRINCIPAL</button>
       </div>
     </div>`;
 }

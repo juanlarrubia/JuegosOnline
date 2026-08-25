@@ -1,23 +1,311 @@
-
 {% extends "base.html" %}{% block content %}
 <style>
 .gx{max-width:1000px;margin:auto;padding:8px;color:#fff}.top{display:flex;gap:7px;flex-wrap:wrap}.pill{background:#101d35;border:1px solid #334b70;border-radius:12px;padding:9px 13px;font-weight:900;flex:1;text-align:center}.arena{background:radial-gradient(circle at 50% 20%,#174c3b,#071b19 70%);border:8px solid #6c4025;border-radius:22px;padding:15px;min-height:430px;box-shadow:inset 0 0 35px #0009;margin-top:8px}.players{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}.player{background:#101d35;border:1px solid #334b70;border-radius:12px;padding:8px 11px;flex:1;min-width:130px}.active{outline:2px solid #ffd43b}.cards{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:14px}.card{width:82px;height:116px;background:#fff;color:#111;border-radius:9px;border:2px solid #ddd;box-shadow:0 7px 14px #0008;display:flex;flex-direction:column;justify-content:space-between;padding:7px;font-size:24px;font-weight:1000;animation:deal .45s ease}.red{color:#c21f30}.back{background:repeating-linear-gradient(45deg,#162a58,#162a58 6px,#b8c8ee 6px,#b8c8ee 9px);border:5px solid white}.btn{border:0;border-radius:13px;padding:12px 17px;font-weight:1000;background:linear-gradient(90deg,#ffdc3d,#52d9e4);cursor:pointer}.btn2{background:#172842;color:white;border:1px solid #456080}.center{text-align:center}.overlay{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:99}.panel{background:#101d35;border:2px solid #526d96;border-radius:20px;padding:22px;max-width:420px;width:90%;text-align:center}.hidden{display:none!important}@keyframes deal{from{transform:translateY(-70px) rotate(15deg);opacity:0}to{transform:none;opacity:1}}@keyframes win{50%{transform:scale(1.12);filter:drop-shadow(0 0 18px gold)}}.winner{animation:win .7s 4}.medal{color:#ffd43b}
 @media(max-width:600px){.gx{padding:2px}.arena{padding:7px;min-height:390px;border-width:5px}.card{width:58px;height:86px;font-size:18px;padding:4px}.pill{font-size:11px;padding:7px}.player{font-size:11px;min-width:45%}}
 </style>
-<div class="gx"><h1>🪢 Ahorcado Deluxe</h1><div class="top"><div class="pill" id="status">Preparando…</div><div class="pill">🏆 <span id="series">Partida 1</span></div></div><div id="players" class="players"></div><div class="arena"><div class="center"><div id="drawing" style="font-size:70px;min-height:90px">🪢</div><div id="word" style="font-size:32px;letter-spacing:6px;font-weight:1000;margin:18px"></div><div id="letters" style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center"></div><div id="reveal" style="font-size:20px;margin:12px"></div></div></div></div>
-<div id="setup" class="overlay hidden"><div class="panel"><h2>🏆 Partidas a ganar</h2><p>Elige cuántas partidas hay que ganar para ser campeón.</p><div style="display:flex;gap:8px;justify-content:center"><button class="btn target" data-n="1">1</button><button class="btn btn2 target" data-n="2">2</button><button class="btn btn2 target" data-n="3">3</button><button class="btn btn2 target" data-n="5">5</button></div></div></div>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script><script>
-const socket=io(),CODE={{codigo|tojson}},UID={{user.id|tojson}};let state=null,lastSeq=-1;
-function tone(freq=440,d=.12,type='sine'){try{let a=new(window.AudioContext||webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.value=freq;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(.12,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);o.start();o.stop(a.currentTime+d)}catch(e){}}
-function fanfare(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.35,'triangle'),i*150))}
-function me(){return state?.players.findIndex(p=>String(p.id||'')===String(UID))??-1}
-function renderPlayers(){players.innerHTML=state.players.map((p,i)=>`<div class="player ${state.turn===i?'active':''}"><b>${p.bot?'🤖':'👤'} ${p.name}</b><br><span class="medal">⭐ ${p.stars||0}</span> · 🏆 ${state.wins?.[i]||0}</div>`).join('');series.textContent=`Partida ${state.round||1} · A ${state.target||1} victorias`}
-document.querySelectorAll('.target').forEach(b=>b.onclick=()=>CONFIG(+b.dataset.n));
-</script>
+
+<div class="gx">
+    <h1>🪢 Ahorcado Deluxe</h1>
+
+    <div class="top">
+        <div class="pill" id="status">Preparando…</div>
+        <div class="pill">🏆 <span id="series">Partida 1</span></div>
+    </div>
+
+    <div id="players" class="players"></div>
+
+    <div class="arena">
+        <div class="center">
+            <div id="drawing" style="font-size:70px;min-height:90px">🪢</div>
+            <div id="word" style="font-size:32px;letter-spacing:6px;font-weight:1000;margin:18px"></div>
+            <div id="letters" style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center"></div>
+            <div id="reveal" style="font-size:20px;margin:12px"></div>
+        </div>
+    </div>
+</div>
+
+<!-- CONFIGURACIÓN -->
+<div id="setup" class="overlay hidden">
+    <div class="panel">
+        <h2>🏆 Partidas a ganar</h2>
+        <p>Elige cuántas partidas hay que ganar para ser campeón.</p>
+
+        <div style="display:flex;gap:8px;justify-content:center">
+            <button class="btn target" data-n="1">1</button>
+            <button class="btn btn2 target" data-n="2">2</button>
+            <button class="btn btn2 target" data-n="3">3</button>
+            <button class="btn btn2 target" data-n="5">5</button>
+        </div>
+    </div>
+</div>
+
+<!-- FINAL DE PARTIDA -->
+<div id="finishOverlay" class="overlay hidden">
+    <div class="panel">
+
+        <div id="finishIcon" style="font-size:60px">🏆</div>
+
+        <h2 id="finishTitle">Partida terminada</h2>
+
+        <p id="finishText"></p>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
+
+            <button
+                id="finishReplay"
+                class="btn"
+                onclick="finishAction('replay')">
+                🔁 NUEVA PARTIDA
+            </button>
+
+            <button
+                id="finishMenu"
+                class="btn btn2"
+                onclick="finishAction('menu')">
+                🏠 SALIR AL MENÚ PRINCIPAL
+            </button>
+
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
 <script>
-function CONFIG(n){socket.emit("hang_config",{code:CODE,target:n})}
-socket.emit("hang_join",{code:CODE});
-socket.on("hang_state",s=>{state=s;renderPlayers();setup.classList.toggle("hidden",state.configured||String(state.host_id)!==String(UID));status.textContent=state.over?(state.winner===null?"💀 Nadie acertó":`🏆 ${state.players[state.winner].name} gana`):`Turno: ${state.players[state.turn].name}`;word.textContent=state.masked;drawing.textContent=["🪢","🙂","😐","😟","😨","😵","💀","☠️"][Math.min(state.errors,7)];reveal.textContent=state.over?`Palabra: ${state.word}`:"";letters.innerHTML="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("").map(l=>`<button class="btn btn2" ${state.used.includes(l)||state.over?'disabled':''} onclick="pick('${l}')">${l}</button>`).join("");if(state.seq!==lastSeq){lastSeq=state.seq;if(state.event)tone(state.event.type==="hit"?760:170,.18,state.event.type==="hit"?'triangle':'sawtooth');if(state.over&&state.winner!==null)fanfare()}})
-function pick(l){if(!state||state.over)return;socket.emit("hang_letter",{code:CODE,letter:l})}
-</script>{% endblock %}
+const socket=io(),
+      CODE={{codigo|tojson}},
+      UID={{user.id|tojson}};
+
+let state=null,
+    lastSeq=-1,
+    finishShown=false,
+    finishActionDone=false;
+
+function tone(freq=440,d=.12,type='sine'){
+    try{
+        let a=new(window.AudioContext||webkitAudioContext)(),
+            o=a.createOscillator(),
+            g=a.createGain();
+
+        o.type=type;
+        o.frequency.value=freq;
+        o.connect(g);
+        g.connect(a.destination);
+        g.gain.setValueAtTime(.12,a.currentTime);
+        g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);
+        o.start();
+        o.stop(a.currentTime+d);
+    }catch(e){}
+}
+
+function fanfare(){
+    [523,659,784,1047].forEach(
+        (f,i)=>setTimeout(()=>tone(f,.35,'triangle'),i*150)
+    );
+}
+
+function me(){
+    return state?.players.findIndex(
+        p=>String(p.id||'')===String(UID)
+    )??-1;
+}
+
+function renderPlayers(){
+    players.innerHTML=state.players.map((p,i)=>
+        `<div class="player ${state.turn===i?'active':''}">
+            <b>${p.bot?'🤖':'👤'} ${p.name}</b><br>
+            <span class="medal">⭐ ${p.stars||0}</span>
+            · 🏆 ${state.wins?.[i]||0}
+        </div>`
+    ).join('');
+
+    series.textContent=
+        `Partida ${state.round||1} · A ${state.target||1} victorias`;
+}
+
+document.querySelectorAll('.target').forEach(
+    b=>b.onclick=()=>CONFIG(+b.dataset.n)
+);
+
+function CONFIG(n){
+    socket.emit("hang_config",{
+        code:CODE,
+        target:n
+    });
+}
+
+socket.emit("hang_join",{
+    code:CODE
+});
+
+function showFinishScreen(){
+
+    if(finishShown)return;
+
+    finishShown=true;
+
+    let title="🏆 Partida terminada";
+    let text="";
+
+    if(state.winner===null){
+
+        finishIcon.textContent="💀";
+        title="Nadie acertó";
+        text=`La palabra era: ${state.word}`;
+
+    }else{
+
+        finishIcon.textContent="🏆";
+        title=`${state.players[state.winner].name} gana`;
+        text=`La palabra era: ${state.word}`;
+
+    }
+
+    finishTitle.textContent=title;
+    finishText.textContent=text;
+
+    finishOverlay.classList.remove("hidden");
+}
+
+function finishAction(action){
+
+    if(finishActionDone)return;
+
+    finishActionDone=true;
+
+    /*
+     * El anuncio se muestra AQUÍ:
+     * después de pulsar el botón final.
+     */
+    if(window.AndroidAds){
+
+        window.AndroidAds.partidaTerminada();
+
+        /*
+         * Damos tiempo al anuncio para abrirse.
+         * Si el anuncio no está disponible, continuamos
+         * automáticamente.
+         */
+        setTimeout(function(){
+
+            continueAfterAd(action);
+
+        },700);
+
+    }else{
+
+        continueAfterAd(action);
+
+    }
+}
+
+function continueAfterAd(action){
+
+    if(action==="menu"){
+
+        location.href="/menu";
+
+    }else{
+
+        /*
+         * Recarga la partida para comenzar de nuevo.
+         */
+        location.reload();
+
+    }
+}
+
+socket.on("hang_state",s=>{
+
+    state=s;
+
+    renderPlayers();
+
+    setup.classList.toggle(
+        "hidden",
+        state.configured ||
+        String(state.host_id)!==String(UID)
+    );
+
+    status.textContent=
+        state.over
+        ? (
+            state.winner===null
+            ? "💀 Nadie acertó"
+            : `🏆 ${state.players[state.winner].name} gana`
+          )
+        : `Turno: ${state.players[state.turn].name}`;
+
+    word.textContent=state.masked;
+
+    drawing.textContent=[
+        "🪢",
+        "🙂",
+        "😐",
+        "😟",
+        "😨",
+        "😵",
+        "💀",
+        "☠️"
+    ][Math.min(state.errors,7)];
+
+    reveal.textContent=
+        state.over
+        ? `Palabra: ${state.word}`
+        : "";
+
+    letters.innerHTML=
+        "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"
+        .split("")
+        .map(l=>
+            `<button
+                class="btn btn2"
+                ${state.used.includes(l)||state.over?'disabled':''}
+                onclick="pick('${l}')">
+                ${l}
+            </button>`
+        ).join('');
+
+    if(state.seq!==lastSeq){
+
+        lastSeq=state.seq;
+
+        if(state.event){
+
+            tone(
+                state.event.type==="hit"?760:170,
+                .18,
+                state.event.type==="hit"
+                    ? 'triangle'
+                    : 'sawtooth'
+            );
+        }
+
+        if(state.over){
+
+            if(state.winner!==null){
+                fanfare();
+            }
+
+            /*
+             * Solo mostramos el resultado.
+             * EL ANUNCIO NO SE MUESTRA AQUÍ.
+             */
+            showFinishScreen();
+        }
+    }
+});
+
+function pick(l){
+
+    if(!state||state.over)return;
+
+    socket.emit("hang_letter",{
+        code:CODE,
+        letter:l
+    });
+}
+</script>
+
+{% endblock %}

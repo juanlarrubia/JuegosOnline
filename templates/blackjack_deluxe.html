@@ -5,6 +5,36 @@
 @media(max-width:600px){.gx{padding:2px}.arena{padding:7px;min-height:390px;border-width:5px}.card{width:58px;height:86px;font-size:18px;padding:4px}.pill{font-size:11px;padding:7px}.player{font-size:11px;min-width:45%}}
 </style>
 <div class="gx"><h1>🂡 Blackjack Deluxe</h1><div class="top"><div class="pill" id="status">Preparando…</div><div class="pill">🏆 <span id="series">Partida 1</span></div></div><div id="players" class="players"></div><div class="arena"><div class="center"><h2>🂡 BLACKJACK 21</h2><h3>BANCA</h3><div id="dealer" class="cards"></div><div id="hands"></div><div style="display:flex;gap:10px;justify-content:center"><button id="hit" class="btn" onclick="act('hit')">🃏 PEDIR</button><button id="stand" class="btn btn2" onclick="act('stand')">✋ PLANTARSE</button></div></div></div></div>
+
+<div id="finishOverlay" class="overlay hidden">
+  <div class="panel">
+
+    <div id="finishIcon" style="font-size:60px">🏆</div>
+
+    <h2 id="finishTitle">Partida terminada</h2>
+
+    <p id="finishText"></p>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
+
+      <button
+        id="finishReplay"
+        class="btn"
+        onclick="finishAction('replay')">
+        🔁 NUEVA PARTIDA
+      </button>
+
+      <button
+        id="finishMenu"
+        class="btn btn2"
+        onclick="finishAction('menu')">
+        🏠 SALIR AL MENÚ PRINCIPAL
+      </button>
+
+    </div>
+
+  </div>
+</div>
 <div id="setup" class="overlay hidden"><div class="panel"><h2>🏆 Partidas a ganar</h2><p>Elige cuántas partidas hay que ganar para ser campeón.</p><div style="display:flex;gap:8px;justify-content:center"><button class="btn target" data-n="1">1</button><button class="btn btn2 target" data-n="2">2</button><button class="btn btn2 target" data-n="3">3</button><button class="btn btn2 target" data-n="5">5</button></div></div></div>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script><script>
 const socket=io(),CODE={{codigo|tojson}},UID={{user.id|tojson}};let state=null,lastSeq=-1;
@@ -19,6 +49,100 @@ document.querySelectorAll('.target').forEach(b=>b.onclick=()=>CONFIG(+b.dataset.
 function CONFIG(n){socket.emit("bj_config",{code:CODE,target:n})}
 socket.emit("bj_join",{code:CODE});
 function chtml(c){if(!c)return `<div class="card back"></div>`;let[r,s]=c,red=s==="♥"||s==="♦";return `<div class="card ${red?'red':''}"><span>${r}${s}</span><span style="text-align:center">${s}</span></div>`}
-socket.on("bj_state",s=>{state=s;renderPlayers();setup.classList.toggle("hidden",state.configured||String(state.host_id)!==String(UID));let mi=state.players.findIndex(p=>!p.bot&&p.name==={{user.username|tojson}});status.textContent=state.over?(state.winners.length?`🏆 Ganan: ${state.winners.map(i=>state.players[i].name).join(", ")}`:"🏦 Gana la banca"):`Turno: ${state.players[state.turn]?.name||"Banca"}`;dealer.innerHTML=state.dealer.map(chtml).join("")+(state.dealer_value!==null?`<b> ${state.dealer_value}</b>`:"");hands.innerHTML=state.players.map((p,i)=>`<section><b>${p.bot?'🤖':'👤'} ${p.name} · ${state.values[i]}</b><div class="cards">${state.hands[i].map(chtml).join("")}</div></section>`).join("");let mine=state.turn===mi&&!state.over;hit.disabled=!mine;stand.disabled=!mine;if(state.seq!==lastSeq){lastSeq=state.seq;tone(state.event?.type==="hit"?620:330,.13,'triangle');if(state.over)fanfare()}})
+socket.on("bj_state",s=>{state=s;renderPlayers();setup.classList.toggle("hidden",state.configured||String(state.host_id)!==String(UID));let mi=state.players.findIndex(p=>!p.bot&&p.name==={{user.username|tojson}});status.textContent=state.over?(state.winners.length?`🏆 Ganan: ${state.winners.map(i=>state.players[i].name).join(", ")}`:"🏦 Gana la banca"):`Turno: ${state.players[state.turn]?.name||"Banca"}`;dealer.innerHTML=state.dealer.map(chtml).join("")+(state.dealer_value!==null?`<b> ${state.dealer_value}</b>`:"");hands.innerHTML=state.players.map((p,i)=>`<section><b>${p.bot?'🤖':'👤'} ${p.name} · ${state.values[i]}</b><div class="cards">${state.hands[i].map(chtml).join("")}</div></section>`).join("");let mine=state.turn===mi&&!state.over;hit.disabled=!mine;stand.disabled=!mine;if(state.seq!==lastSeq){
+
+    lastSeq=state.seq;
+
+    tone(
+        state.event?.type==="hit"
+        ? 620
+        : 330,
+        .13,
+        'triangle'
+    );
+
+    if(state.over){
+
+        fanfare();
+
+        /*
+         * Mostramos el resultado,
+         * pero NO el anuncio todavía.
+         */
+        showFinishScreen();
+    }
+}
+let finishShown=false;
+let finishActionDone=false;
+
+function showFinishScreen(){
+
+    if(finishShown)return;
+
+    finishShown=true;
+
+    const winners=state.winners||[];
+
+    if(winners.length){
+
+        finishIcon.textContent="🏆";
+
+        finishTitle.textContent=
+            winners.length===1
+            ? `🏆 ${state.players[winners[0]].name} gana`
+            : "🏆 ¡Hay varios ganadores!";
+
+        finishText.textContent=
+            winners.map(i=>state.players[i].name).join(", ");
+
+    }else{
+
+        finishIcon.textContent="🂡";
+
+        finishTitle.textContent="🏦 Gana la banca";
+
+        finishText.textContent="La banca gana esta partida.";
+
+    }
+
+    finishOverlay.classList.remove("hidden");
+}
+
+function finishAction(action){
+
+    if(finishActionDone)return;
+
+    finishActionDone=true;
+
+    if(window.AndroidAds){
+
+        window.AndroidAds.partidaTerminada();
+
+        setTimeout(function(){
+
+            continueAfterAd(action);
+
+        },700);
+
+    }else{
+
+        continueAfterAd(action);
+
+    }
+}
+
+function continueAfterAd(action){
+
+    if(action==="menu"){
+
+        location.href="/menu";
+
+    }else{
+
+        location.reload();
+
+    }
+}
+
 function act(a){socket.emit("bj_action",{code:CODE,action:a})}
 </script>{% endblock %}

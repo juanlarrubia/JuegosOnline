@@ -250,6 +250,24 @@
  <div class="bn-victory-wave"></div>
 </div>
 
+<div id="bnFinishModal" class="bn-series-modal hidden">
+  <div class="bn-series-card">
+    <div id="bnFinishIcon" style="font-size:56px">🏆</div>
+    <h2 id="bnFinishTitle">Partida terminada</h2>
+    <p id="bnFinishText"></p>
+
+    <div style="display:flex;flex-direction:column;gap:9px;margin-top:18px">
+      <button id="bnFinishContinue" class="bn-series-start" type="button">
+        🔁 SIGUIENTE PARTIDA
+      </button>
+
+      <button id="bnFinishMenu" class="bn-rotate" type="button">
+        🏠 SALIR AL MENÚ
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="bn-shell">
  <header class="bn-head"><div><small>ESTRATEGIA · FLOTA</small><h1>⚓ Batalla Naval</h1></div><a class="back-link" href="{{url_for('juegos')}}">← Juegos</a></header>
  <div class="bn-hud"><div id="bnStatus">Selecciona un barco para colocarlo</div><div>🚢 Flota: <b id="bnShipsLeft">5</b></div><div>🎯 Impactos: <b id="bnHits">0/17</b></div></div>
@@ -439,8 +457,79 @@ function reportProgress(){
    fetch('/api/progreso/resultado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'barquitos_deluxe',code:key,won,vs_cpu:state.players.some(p=>p.bot),score:state.enemy_shots.filter(x=>x===2).length})})
    .then(r=>r.json()).then(d=>(d.new_medals||[]).forEach(m=>toast(`🏅 ${m.title} · +${m.stars} ⭐`))).catch(()=>{});
    if(won)superVictory();
+showBnFinishModal(won);
  }
 }
+
+let bnFinishShown=false;
+
+function showBnFinishModal(won){
+
+  if(bnFinishShown)return;
+  bnFinishShown=true;
+
+  const champion=!!state.champ_over;
+
+  bnFinishIcon.textContent=
+    champion ? (won ? "🏆" : "💥") :
+    (won ? "🚢🏆" : "💥");
+
+  bnFinishTitle.textContent=
+    champion
+      ? (won ? "¡ERES CAMPEÓN!" : "EL RIVAL ES CAMPEÓN")
+      : (won ? "¡VICTORIA NAVAL!" : "PARTIDA PERDIDA");
+
+  bnFinishText.textContent=
+    champion
+      ? "El campeonato ha terminado."
+      : "La partida ha terminado.";
+
+  bnFinishContinue.textContent=
+    champion
+      ? "🔁 NUEVO CAMPEONATO"
+      : "🔁 SIGUIENTE PARTIDA";
+
+  bnFinishModal.classList.remove("hidden");
+}
+
+function bnFinishAction(action){
+
+  if(window.AndroidAds){
+
+    window.AndroidAds.partidaTerminada();
+
+    setTimeout(function(){
+      continueBnFinish(action);
+    },700);
+
+  }else{
+
+    continueBnFinish(action);
+
+  }
+}
+
+function continueBnFinish(action){
+
+  if(action==="menu"){
+
+    location.href="/menu";
+
+  }else{
+
+    location.reload();
+
+  }
+}
+
+bnFinishContinue.onclick=()=>{
+  bnFinishAction("continue");
+};
+
+bnFinishMenu.onclick=()=>{
+  bnFinishAction("menu");
+};
+
 function applyState(st){
  const oldRound=state?.round_no||0;state=st;
  const isHost=String(st.host_id)===String(ME);
@@ -472,12 +561,7 @@ function applyState(st){
  if(st.round_over){
    const won=st.winner===st.viewer;
    bnMessage.textContent=won?'🏆 ¡Has ganado esta partida!':'💥 Has perdido esta partida.';
-   if(st.champ_over){
-     bnMessage.textContent=won?'🏆 ¡ERES CAMPEÓN!':'🏆 El rival es campeón.';
-     if(isHost)setTimeout(()=>{bnSeriesModal.classList.remove('hidden')},4200);
-   }else{
-     bnMessage.textContent+=' Siguiente partida en unos segundos…';
-   }
+   
  }
 }
 
