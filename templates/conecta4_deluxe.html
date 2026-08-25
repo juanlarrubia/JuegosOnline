@@ -180,17 +180,31 @@ function progressPlay(key){
 function progressResult(key,won,vsCpu){
  if(!key || progressResultKey===key)return;
  progressResultKey=key;
+
+ // PRUEBA ANUNCIOS ANDROID
+ if(window.AndroidAds){
+   console.log("AD: CONECTA 4 TERMINADA");
+   window.AndroidAds.partidaTerminada();
+ }
+
  fetch('/api/progreso/resultado',{
-   method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({game:'conecta4_deluxe',code:ROOM||key,won:!!won,vs_cpu:!!vsCpu,score:0})
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({
+     game:'conecta4_deluxe',
+     code:ROOM||key,
+     won:!!won,
+     vs_cpu:!!vsCpu,
+     score:0
+   })
  }).then(function(r){return r.json();}).then(function(d){
    if(d&&d.new_medals&&d.new_medals.length){
-     setTimeout(function(){msg.textContent='🏅 '+d.new_medals[0].title+' · ⭐ '+d.stars;},700);
+     setTimeout(function(){
+       msg.textContent='🏅 '+d.new_medals[0].title+' · ⭐ '+d.stars;
+     },700);
    }
  }).catch(function(){});
-}
-
-function emptyBoard(){return Array.from({length:6},function(){return Array(7).fill(0);});}
+}function emptyBoard(){return Array.from({length:6},function(){return Array(7).fill(0);});}
 function discClass(p){return p===1?'c4x-red':'c4x-yellow';}
 
 function buildPreview(){var h='';for(var c=0;c<7;c++)h+='<div class="c4x-preview-cell"><div id="pv'+c+'" class="c4x-preview-disc"></div></div>';preview.innerHTML=h;}
