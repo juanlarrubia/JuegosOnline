@@ -1003,6 +1003,15 @@ def login():
         ok, auth=firebase_sign_in(email,password)
         if not ok:
             conn.close(); flash(firebase_error_text(auth),"error"); return redirect(url_for("index"))
+okp, profile=firestore_get_profile(auth["localId"],auth["idToken"])
+if okp:
+    conn.execute(
+        "UPDATE usuarios SET premium=?, stars=? WHERE id=?",
+        (1 if profile.get("premium") else 0,
+         profile.get("stars", user["stars"] or 0),
+         user["id"])
+    )
+    conn.commit()
         session["user_id"]=user["id"]; session["firebase_uid"]=auth["localId"]
         conn.close(); return redirect(url_for("menu"))
 
