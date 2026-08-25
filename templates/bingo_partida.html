@@ -382,7 +382,20 @@ function togglePause(){socket.emit("bingo_toggle_pause",{code:CODE})}
 function restartBingo(){
   bingoEndAction("restart");
 }
+const IS_PREMIUM = {{ 1 if user.premium else 0 }};
+
 function bingoEndAction(action){
+
+  if(IS_PREMIUM){
+
+    if(action==="menu"){
+      location.href="/menu";
+    }else{
+      socket.emit("bingo_restart",{code:CODE});
+    }
+
+    return;
+  }
 
   if(window.AndroidAds){
 
@@ -412,6 +425,7 @@ function bingoEndAction(action){
 
   }
 }
+
 function showGameOver(d){
   // Ocultamos cualquier verificación abierta.
   document.querySelectorAll(".bingo-verify-modal,.prize-splash").forEach(e=>e.remove());

@@ -492,7 +492,16 @@ function showBnFinishModal(won){
   bnFinishModal.classList.remove("hidden");
 }
 
+const IS_PREMIUM = {{ 1 if user.premium else 0 }};
+
 function bnFinishAction(action){
+
+  if(IS_PREMIUM){
+
+    continueBnFinish(action);
+    return;
+
+  }
 
   if(window.AndroidAds){
 
@@ -508,7 +517,6 @@ function bnFinishAction(action){
 
   }
 }
-
 function continueBnFinish(action){
 
   if(action==="menu"){
