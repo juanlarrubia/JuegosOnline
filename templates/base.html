@@ -25,9 +25,23 @@
                     window.AndroidAds
                 ) {
 
-                    console.log("AD: partida terminada");
+                  console.log("AD: partida terminada");
 
-                    window.AndroidAds.partidaTerminada();
+const aviso = document.createElement("div");
+aviso.textContent = "📺 DETECTADO FINAL DE PARTIDA";
+aviso.style.position = "fixed";
+aviso.style.top = "20px";
+aviso.style.left = "20px";
+aviso.style.right = "20px";
+aviso.style.zIndex = "999999";
+aviso.style.padding = "20px";
+aviso.style.background = "red";
+aviso.style.color = "white";
+aviso.style.fontSize = "20px";
+aviso.style.textAlign = "center";
+document.body.appendChild(aviso);
+
+window.AndroidAds.partidaTerminada();
                 }
 
             } catch (e) {
