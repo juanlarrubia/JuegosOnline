@@ -168,6 +168,7 @@ function showFinishScreen(){
     finishOverlay.classList.remove("hidden");
 }
 
+const IS_PREMIUM = {{ 1 if user.premium else 0 }};
 function finishAction(action){
 
     if(finishActionDone)return;
@@ -175,18 +176,22 @@ function finishAction(action){
     finishActionDone=true;
 
     /*
-     * El anuncio se muestra AQUÍ:
-     * después de pulsar el botón final.
+     * Si es Premium, continúa directamente sin anuncio.
+     */
+    if(IS_PREMIUM){
+
+        continueAfterAd(action);
+        return;
+
+    }
+
+    /*
+     * Usuario normal: mostrar anuncio.
      */
     if(window.AndroidAds){
 
         window.AndroidAds.partidaTerminada();
 
-        /*
-         * Damos tiempo al anuncio para abrirse.
-         * Si el anuncio no está disponible, continuamos
-         * automáticamente.
-         */
         setTimeout(function(){
 
             continueAfterAd(action);
@@ -199,7 +204,6 @@ function finishAction(action){
 
     }
 }
-
 function continueAfterAd(action){
 
     if(action==="menu"){
