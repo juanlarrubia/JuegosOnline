@@ -5,6 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Juegos Online{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<script>
+(function () {
+
+    const originalFetch = window.fetch;
+
+    window.fetch = function () {
+
+        const url = arguments[0];
+
+        return originalFetch.apply(this, arguments).then(function (response) {
+
+            try {
+
+                if (
+                    typeof url === "string" &&
+                    url.indexOf("/api/progreso/resultado") !== -1 &&
+                    window.AndroidAds
+                ) {
+
+                    console.log("AD: partida terminada");
+
+                    window.AndroidAds.partidaTerminada();
+                }
+
+            } catch (e) {
+
+                console.log("Error avisando a Android:", e);
+
+            }
+
+            return response;
+        });
+    };
+
+})();
+</script>
+
 </head>
 <body class="theme-{{ profile_user.theme if profile_user else 'violeta' }}">
     <div class="bg-orb orb1"></div>
@@ -26,52 +64,7 @@
 
     {% block scripts %}
 
-    <script>
-    (function () {
-        /*
-         * Aviso a la aplicación Android cuando se registra
-         * una partida mediante /api/progreso/jugada.
-         *
-         * El servidor devuelve el número real de partidas.
-         * En navegador normal no hace nada.
-         */
-        window.addEventListener("load", function () {
-
-            if (!window.AndroidAds) {
-                return;
-            }
-
-            const originalFetch = window.fetch;
-
-            window.fetch = function () {
-
-                const url = arguments[0];
-
-                return originalFetch.apply(this, arguments).then(function (response) {
-
-                    try {
-                        if (typeof url === "string" &&
-                            url.indexOf("/api/progreso/jugada") !== -1) {
-
-                            response.clone().json().then(function (data) {
-
-                                if (data && typeof data.plays === "number") {
-                                    window.AndroidAds.partidaRegistrada(data.plays);
-                                }
-
-                            }).catch(function () {});
-                        }
-                    } catch (e) {
-                        console.log("Error avisando a Android:", e);
-                    }
-
-                    return response;
-                });
-            };
-
-        });
-    })();
-</script>
+   
     {% endblock %}
 </body>
 </html>
