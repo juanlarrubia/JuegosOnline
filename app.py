@@ -1430,17 +1430,34 @@ def api_firebase_sync_test():
         "firebase_uid_present":bool(u and u["firebase_uid"]),
         "email":u["email"] if u else ""
     })
-
 @app.post("/api/progreso/jugada")
 def api_progreso_jugada():
     user=current_user()
-    if not user:return jsonify({"ok":False}),401
+    if not user:
+        return jsonify({"ok":False}),401
+
     d=request.get_json(silent=True) or {}
-    game=d.get("game");code=d.get("code","sin_sala")
+    game=d.get("game")
+    code=d.get("code","sin_sala")
+
     new=record_game_play(user["id"],game,code)
     fresh=current_user()
-    return jsonify({"ok":True,"stars":fresh["stars"],"new_medals":new})
 
+    conn=get_db()
+    row=conn.execute(
+        "SELECT plays FROM progreso_juegos WHERE user_id=? AND game=?",
+        (user["id"],game)
+    ).fetchone()
+    conn.close()
+
+    plays=int(row["plays"] if row else 0)
+
+    return jsonify({
+        "ok":True,
+        "stars":fresh["stars"],
+        "new_medals":new,
+        "plays":plays
+    })
 @app.post("/api/progreso/resultado")
 def api_progreso_resultado():
     user=current_user()

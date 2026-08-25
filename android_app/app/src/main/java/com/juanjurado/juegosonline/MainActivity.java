@@ -72,8 +72,8 @@ public class MainActivity extends Activity {
         webView.addJavascriptInterface(new Object() {
 
             @JavascriptInterface
-            public void partidaRegistrada() {
-                MainActivity.this.partidaRegistrada();
+            public void partidaRegistrada(int plays) {
+                MainActivity.this.partidaRegistrada(plays);
             }
 
         }, "AndroidAds");
@@ -96,18 +96,14 @@ public class MainActivity extends Activity {
     }
 
     @JavascriptInterface
-    public void partidaRegistrada() {
-
-        partidasDesdeAnuncio++;
+    public void partidaRegistrada(int plays) {
 
         Log.d(
                 "ADMOB",
-                "PARTIDA REGISTRADA: " + partidasDesdeAnuncio + "/3"
+                "PARTIDAS REGISTRADAS EN SERVIDOR: " + plays
         );
 
-        if (partidasDesdeAnuncio >= 3) {
-
-            partidasDesdeAnuncio = 0;
+        if (plays >= 3) {
 
             if (interstitialAd != null) {
 
@@ -117,8 +113,8 @@ public class MainActivity extends Activity {
                 );
 
                 interstitialAd.show(MainActivity.this);
-
                 interstitialAd = null;
+
             } else {
 
                 Log.d(
@@ -126,7 +122,6 @@ public class MainActivity extends Activity {
                         "ANUNCIO NO DISPONIBLE TODAVÍA"
                 );
 
-                // Volvemos a preparar un anuncio
                 loadInterstitial();
             }
         }
