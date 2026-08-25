@@ -24,6 +24,47 @@
         {% block content %}{% endblock %}
     </main>
 
-    {% block scripts %}{% endblock %}
+    {% block scripts %}
+
+    <script>
+        (function () {
+            /*
+             * Aviso a la aplicación Android cuando se registra
+             * una partida mediante /api/progreso/jugada.
+             *
+             * No hace nada cuando se abre la web desde un navegador normal.
+             */
+            window.addEventListener("load", function () {
+
+                if (!window.AndroidAds) {
+                    return;
+                }
+
+                const originalFetch = window.fetch;
+
+                window.fetch = function () {
+
+                    const url = arguments[0];
+
+                    return originalFetch.apply(this, arguments).then(function (response) {
+
+                        try {
+                            if (typeof url === "string" &&
+                                url.indexOf("/api/progreso/jugada") !== -1) {
+
+                                window.AndroidAds.partidaRegistrada();
+                            }
+                        } catch (e) {
+                            console.log("Error avisando a Android:", e);
+                        }
+
+                        return response;
+                    });
+                };
+
+            });
+    </script>
+
+    {% endblock %}
 </body>
 </html>

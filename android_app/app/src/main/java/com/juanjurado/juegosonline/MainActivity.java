@@ -2,6 +2,7 @@ package com.juanjurado.juegosonline;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.webkit.JavascriptInterface;
 import android.os.Bundle;
 import android.util.Log;
 import android.webkit.CookieManager;
@@ -31,6 +32,7 @@ public class MainActivity extends Activity {
 
     private WebView webView;
     private InterstitialAd interstitialAd;
+    private int partidasDesdeAnuncio = 0;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -67,6 +69,15 @@ public class MainActivity extends Activity {
 
         webView.setWebChromeClient(new WebChromeClient());
 
+        webView.addJavascriptInterface(new Object() {
+
+            @JavascriptInterface
+            public void partidaRegistrada() {
+                MainActivity.this.partidaRegistrada();
+            }
+
+        }, "AndroidAds");
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(
@@ -84,6 +95,42 @@ public class MainActivity extends Activity {
         }
     }
 
+    @JavascriptInterface
+    public void partidaRegistrada() {
+
+        partidasDesdeAnuncio++;
+
+        Log.d(
+                "ADMOB",
+                "PARTIDA REGISTRADA: " + partidasDesdeAnuncio + "/3"
+        );
+
+        if (partidasDesdeAnuncio >= 3) {
+
+            partidasDesdeAnuncio = 0;
+
+            if (interstitialAd != null) {
+
+                Log.d(
+                        "ADMOB",
+                        "MOSTRANDO ANUNCIO TRAS 3 PARTIDAS"
+                );
+
+                interstitialAd.show(MainActivity.this);
+
+                interstitialAd = null;
+            } else {
+
+                Log.d(
+                        "ADMOB",
+                        "ANUNCIO NO DISPONIBLE TODAVÍA"
+                );
+
+                // Volvemos a preparar un anuncio
+                loadInterstitial();
+            }
+        }
+    }
     private void loadInterstitial() {
 
         AdRequest adRequest = new AdRequest.Builder().build();
