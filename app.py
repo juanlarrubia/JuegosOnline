@@ -995,49 +995,93 @@ def login():
     identifier=request.form.get("username","").strip()
     password=request.form.get("password","")
     conn=get_db()
-    user=conn.execute("SELECT * FROM usuarios WHERE username=? OR email=?",(identifier,identifier.lower())).fetchone()
+    user=conn.execute(
+        "SELECT * FROM usuarios WHERE username=? OR email=?",
+        (identifier,identifier.lower())
+    ).fetchone()
 
     # Cuentas nuevas: Firebase es quien valida la contraseña.
     if user and user["firebase_uid"]:
         email=(user["email"] or "").lower()
         ok, auth=firebase_sign_in(email,password)
-        if not ok:
-            conn.close(); flash(firebase_error_text(auth),"error"); return redirect(url_for("index"))
-okp, profile=firestore_get_profile(auth["localId"],auth["idToken"])
-if okp:
-    conn.execute(
-        "UPDATE usuarios SET premium=?, stars=? WHERE id=?",
-        (1 if profile.get("premium") else 0,
-         profile.get("stars", user["stars"] or 0),
-         user["id"])
-    )
-    conn.commit()
-        session["user_id"]=user["id"]; session["firebase_uid"]=auth["localId"]
-        conn.close(); return redirect(url_for("menu"))
 
-    # Permite entrar por correo a una cuenta Firebase que aún no tenga copia local
-    # (por ejemplo, el usuario de prueba creado desde la consola).
+        if not ok:
+            conn.close()
+            flash(firebase_error_text(auth),"error")
+            return redirect(url_for("index"))
+
+        # Recuperamos también premium y estrellas desde Firestore.
+        okp, profile=firestore_get_profile(
+            auth["localId"],
+            auth["idToken"]
+        )
+
+        if okp:
+            conn.execute(
+                "UPDATE usuarios SET premium=?, stars=? WHERE id=?",
+                (
+                    1 if profile.get("premium") else 0,
+                    profile.get("stars", user["stars"] or 0),
+                    user["id"]
+                )
+            )
+            conn.commit()
+
+        session["user_id"]=user["id"]
+        session["firebase_uid"]=auth["localId"]
+        conn.close()
+        return redirect(url_for("menu"))
+
+    # Permite entrar por correo a una cuenta Firebase que aún no tenga copia local.
     if not user and "@" in identifier:
         ok, auth=firebase_sign_in(identifier.lower(),password)
+
         if ok:
-            okp, profile=firestore_get_profile(auth["localId"],auth["idToken"])
+            okp, profile=firestore_get_profile(
+                auth["localId"],
+                auth["idToken"]
+            )
+
             if okp and profile.get("username"):
                 try:
-                    cur=conn.execute("""INSERT INTO usuarios(username,email,password_hash,display_name,stars,firebase_uid,premium)
-                                        VALUES(?,?,?,?,?,?,?)""",
-                                     (profile["username"],identifier.lower(),"!firebase!",profile["username"],
-                                      profile.get("stars",0),auth["localId"],1 if profile.get("premium") else 0))
-                    conn.commit(); session["user_id"]=cur.lastrowid; session["firebase_uid"]=auth["localId"]
-                    conn.close(); return redirect(url_for("menu"))
+                    cur=conn.execute(
+                        """INSERT INTO usuarios(
+                            username,email,password_hash,display_name,
+                            stars,firebase_uid,premium
+                        )
+                        VALUES(?,?,?,?,?,?,?)""",
+                        (
+                            profile["username"],
+                            identifier.lower(),
+                            "!firebase!",
+                            profile["username"],
+                            profile.get("stars",0),
+                            auth["localId"],
+                            1 if profile.get("premium") else 0
+                        )
+                    )
+                    conn.commit()
+                    session["user_id"]=cur.lastrowid
+                    session["firebase_uid"]=auth["localId"]
+                    conn.close()
+                    return redirect(url_for("menu"))
+
                 except sqlite3.IntegrityError:
                     conn.rollback()
-        conn.close(); flash("Correo/usuario o contraseña incorrectos.","error"); return redirect(url_for("index"))
 
-    # Compatibilidad temporal con usuarios antiguos del proyecto, todavía locales.
+        conn.close()
+        flash("Correo/usuario o contraseña incorrectos.","error")
+        return redirect(url_for("index"))
+
+    # Compatibilidad temporal con usuarios antiguos del proyecto.
     if user and check_password_hash(user["password_hash"],password):
-        session["user_id"]=user["id"]; conn.close(); return redirect(url_for("menu"))
+        session["user_id"]=user["id"]
+        conn.close()
+        return redirect(url_for("menu"))
 
-    conn.close(); flash("Correo/usuario o contraseña incorrectos.","error"); return redirect(url_for("index"))
+    conn.close()
+    flash("Correo/usuario o contraseña incorrectos.","error")
+    return redirect(url_for("index"))
 
 @app.route("/logout")
 def logout():
