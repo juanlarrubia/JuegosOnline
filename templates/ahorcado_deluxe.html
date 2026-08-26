@@ -1,315 +1,255 @@
-{% extends "base.html" %}{% block content %}
+{% extends "base.html" %}
+{% block title %}Ahorcado Deluxe{% endblock %}
+{% block content %}
 <style>
-.gx{max-width:1000px;margin:auto;padding:8px;color:#fff}.top{display:flex;gap:7px;flex-wrap:wrap}.pill{background:#101d35;border:1px solid #334b70;border-radius:12px;padding:9px 13px;font-weight:900;flex:1;text-align:center}.arena{background:radial-gradient(circle at 50% 20%,#174c3b,#071b19 70%);border:8px solid #6c4025;border-radius:22px;padding:15px;min-height:430px;box-shadow:inset 0 0 35px #0009;margin-top:8px}.players{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}.player{background:#101d35;border:1px solid #334b70;border-radius:12px;padding:8px 11px;flex:1;min-width:130px}.active{outline:2px solid #ffd43b}.cards{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:14px}.card{width:82px;height:116px;background:#fff;color:#111;border-radius:9px;border:2px solid #ddd;box-shadow:0 7px 14px #0008;display:flex;flex-direction:column;justify-content:space-between;padding:7px;font-size:24px;font-weight:1000;animation:deal .45s ease}.red{color:#c21f30}.back{background:repeating-linear-gradient(45deg,#162a58,#162a58 6px,#b8c8ee 6px,#b8c8ee 9px);border:5px solid white}.btn{border:0;border-radius:13px;padding:12px 17px;font-weight:1000;background:linear-gradient(90deg,#ffdc3d,#52d9e4);cursor:pointer}.btn2{background:#172842;color:white;border:1px solid #456080}.center{text-align:center}.overlay{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:99}.panel{background:#101d35;border:2px solid #526d96;border-radius:20px;padding:22px;max-width:420px;width:90%;text-align:center}.hidden{display:none!important}@keyframes deal{from{transform:translateY(-70px) rotate(15deg);opacity:0}to{transform:none;opacity:1}}@keyframes win{50%{transform:scale(1.12);filter:drop-shadow(0 0 18px gold)}}.winner{animation:win .7s 4}.medal{color:#ffd43b}
-@media(max-width:600px){.gx{padding:2px}.arena{padding:7px;min-height:390px;border-width:5px}.card{width:58px;height:86px;font-size:18px;padding:4px}.pill{font-size:11px;padding:7px}.player{font-size:11px;min-width:45%}}
+:root{--bg:#08111f;--panel:#101d35;--line:#334b70;--gold:#ffd43b;--cyan:#52d9e4;--danger:#ff5964;--ok:#52e58a}
+.hang-shell{max-width:1050px;margin:auto;padding:8px;color:#fff}
+.hang-top{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.hang-pill{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:9px 13px;font-weight:900;flex:1;text-align:center;box-shadow:0 8px 22px #0004}
+.hang-pill small{display:block;color:#9fb3cb;font-size:9px;margin-bottom:2px}
+.hang-pill b{font-size:15px}
+.hang-arena{position:relative;margin-top:9px;background:radial-gradient(circle at 50% 18%,#1d5a43,#071b19 70%);border:8px solid #6c4025;border-radius:24px;padding:14px;min-height:470px;box-shadow:inset 0 0 38px #0009,0 12px 30px #0006;overflow:hidden}
+.hang-players{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.hang-player{background:#0d1930dd;border:1px solid var(--line);border-radius:14px;padding:9px;text-align:center}
+.hang-player.active{outline:2px solid var(--gold);box-shadow:0 0 18px #ffd43b33}
+.hang-player .name{font-weight:1000}.hang-player .score{color:var(--gold);font-weight:1000}
+.hang-stage{display:grid;grid-template-columns:1fr 1.3fr;gap:14px;align-items:center}
+.hangman-box{background:#06120f99;border:1px solid #315b4d;border-radius:18px;padding:10px;min-height:265px;display:grid;place-items:center}
+.hangman-svg{width:min(290px,100%);height:260px;overflow:visible}
+.rope{stroke:#d2ad68;stroke-width:7;stroke-linecap:round}.wood{stroke:#754a28;stroke-width:12;stroke-linecap:round}.body{stroke:#f4d7b0;stroke-width:8;fill:none;stroke-linecap:round}.head{fill:#f4d7b0;stroke:#b98254;stroke-width:4}.dead{stroke:var(--danger)!important;fill:#ffb1b6!important}
+.hang-right{text-align:center}.turn-msg{font-weight:1000;font-size:18px;min-height:28px}
+.word{font-size:clamp(28px,6vw,48px);font-weight:1000;letter-spacing:.25em;margin:18px 0 12px;text-shadow:0 3px 0 #0008}
+.reveal{min-height:26px;font-size:18px;font-weight:900;color:#ffd96a}
+.letters{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:650px;margin:auto}
+.letter{min-width:38px;height:38px;border:1px solid #466180;border-radius:10px;background:#162842;color:#fff;font-weight:1000;cursor:pointer;transition:.15s}
+.letter:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.18)}
+.letter.used{background:#293344;color:#78879b;text-decoration:line-through;opacity:.55}
+.letter.hit{background:#165b45;border-color:#59e39a}.letter.miss{background:#5a222c;border-color:#ff6874}
+.letter:disabled{cursor:not-allowed}
+.actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.btn{border:0;border-radius:13px;padding:11px 16px;font-weight:1000;background:linear-gradient(90deg,var(--gold),var(--cyan));cursor:pointer;color:#07111d}
+.btn.secondary{background:#172842;color:#fff;border:1px solid #456080}
+.btn.hidden{display:none!important}
+.progress{height:8px;background:#122033;border-radius:99px;overflow:hidden;margin:8px auto 0;max-width:440px}.progress i{display:block;height:100%;background:linear-gradient(90deg,#59dfe8,#ffd43b);transition:width .35s}
+.event-pop{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:#000b;pointer-events:none}
+.event-pop.show{display:flex;animation:fadeIn .2s ease}
+.event-card{background:linear-gradient(145deg,#10213b,#173e55);border:3px solid var(--gold);border-radius:25px;padding:25px;text-align:center;width:min(430px,90vw);box-shadow:0 0 40px #ffd43b55;animation:pop .65s cubic-bezier(.2,.9,.25,1.2)}
+.event-icon{font-size:80px;line-height:1}.event-title{font-size:clamp(28px,7vw,52px);font-weight:1000;color:#ffe65d;margin-top:8px}.event-sub{font-weight:900;color:#d8f5ff;margin-top:5px}
+.series-overlay{position:fixed;inset:0;z-index:900;background:#000b;display:flex;align-items:center;justify-content:center;padding:16px}
+.series-card{background:#101d35;border:2px solid #526d96;border-radius:22px;padding:23px;max-width:430px;width:92%;text-align:center;box-shadow:0 20px 60px #000b}
+.series-card.hidden{display:none}.series-card h2{margin:4px 0 8px}.series-card p{color:#c5d3e5;font-size:12px}
+.series-buttons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:15px}
+.medal-toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:2000;background:#14223a;border:1px solid #ffd43b;border-radius:13px;padding:10px 15px;font-weight:1000;box-shadow:0 10px 30px #0009}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes pop{from{transform:scale(.45) rotate(-5deg);opacity:0}70%{transform:scale(1.08) rotate(2deg)}to{transform:scale(1);opacity:1}}
+@keyframes shake{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+.shake{animation:shake .3s}.winword{animation:pop .65s 1}
+@media(max-width:700px){
+ .hang-shell{padding:3px}.hang-arena{border-width:5px;padding:8px;min-height:0}.hang-stage{grid-template-columns:1fr;gap:6px}
+ .hangman-box{min-height:220px}.hangman-svg{height:215px}.hang-players{grid-template-columns:1fr 1fr}.hang-player{font-size:11px;padding:7px}
+ .letter{min-width:34px;height:34px;font-size:12px}.word{letter-spacing:.16em}.hang-pill{font-size:11px;padding:7px}
+}
 </style>
 
-<div class="gx">
-    <h1>🪢 Ahorcado Deluxe</h1>
+<div class="hang-shell">
+  <h1>🪢 Ahorcado Deluxe</h1>
+  <div class="hang-top">
+    <div class="hang-pill"><small>ESTADO</small><b id="status">Preparando…</b></div>
+    <div class="hang-pill"><small>CAMPEONATO</small><b id="series">Partida 1 · A 1 victoria</b></div>
+    <div class="hang-pill"><small>ERRORES</small><b id="errorCount">0 / 7</b></div>
+  </div>
 
-    <div class="top">
-        <div class="pill" id="status">Preparando…</div>
-        <div class="pill">🏆 <span id="series">Partida 1</span></div>
-    </div>
+  <div id="players" class="hang-players"></div>
 
-    <div id="players" class="players"></div>
+  <div class="hang-arena">
+    <div class="hang-stage">
+      <div class="hangman-box">
+        <svg class="hangman-svg" viewBox="0 0 300 270" aria-label="Muñeco del ahorcado">
+          <line class="wood" x1="35" y1="245" x2="260" y2="245"/>
+          <line class="wood" x1="75" y1="245" x2="75" y2="35"/>
+          <line class="wood" x1="75" y1="38" x2="205" y2="38"/>
+          <line class="rope" x1="205" y1="38" x2="205" y2="68"/>
+          <g id="hangBody">
+            <circle id="hangHead" class="head" cx="205" cy="92" r="24"/>
+            <line class="body" x1="205" y1="116" x2="205" y2="178"/>
+            <line class="body" x1="205" y1="130" x2="170" y2="155"/>
+            <line class="body" x1="205" y1="130" x2="240" y2="155"/>
+            <line class="body" x1="205" y1="178" x2="178" y2="218"/>
+            <line class="body" x1="205" y1="178" x2="232" y2="218"/>
+          </g>
+        </svg>
+      </div>
 
-    <div class="arena">
-        <div class="center">
-            <div id="drawing" style="font-size:70px;min-height:90px">🪢</div>
-            <div id="word" style="font-size:32px;letter-spacing:6px;font-weight:1000;margin:18px"></div>
-            <div id="letters" style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center"></div>
-            <div id="reveal" style="font-size:20px;margin:12px"></div>
+      <div class="hang-right">
+        <div id="turnMsg" class="turn-msg">Preparando partida…</div>
+        <div id="word" class="word"></div>
+        <div id="reveal" class="reveal"></div>
+        <div class="progress"><i id="progressBar" style="width:0%"></i></div>
+        <div id="letters" class="letters" style="margin-top:14px"></div>
+        <div class="actions">
+          <button id="newWordBtn" class="btn hidden" onclick="requestNextWord()">🆕 NUEVA PALABRA</button>
+          <button id="menuBtn" class="btn secondary hidden" onclick="finishAction('menu')">🏠 JUEGOS</button>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- CONFIGURACIÓN -->
-<div id="setup" class="overlay hidden">
-    <div class="panel">
-        <h2>🏆 Partidas a ganar</h2>
-        <p>Elige cuántas partidas hay que ganar para ser campeón.</p>
-
-        <div style="display:flex;gap:8px;justify-content:center">
-            <button class="btn target" data-n="1">1</button>
-            <button class="btn btn2 target" data-n="2">2</button>
-            <button class="btn btn2 target" data-n="3">3</button>
-            <button class="btn btn2 target" data-n="5">5</button>
-        </div>
+<div id="seriesSetup" class="series-overlay">
+  <div class="series-card">
+    <div style="font-size:58px">🏆</div>
+    <h2>Campeonato de Ahorcado</h2>
+    <p>¿Cuántas partidas hay que ganar para ser campeón?</p>
+    <div class="series-buttons">
+      <button class="btn target" data-n="1">1</button>
+      <button class="btn secondary target" data-n="2">2</button>
+      <button class="btn secondary target" data-n="3">3</button>
+      <button class="btn secondary target" data-n="5">5</button>
     </div>
+    <p id="waitHost" class="hidden">⏳ Esperando al anfitrión…</p>
+  </div>
 </div>
 
-<!-- FINAL DE PARTIDA -->
-<div id="finishOverlay" class="overlay hidden">
-    <div class="panel">
-
-        <div id="finishIcon" style="font-size:60px">🏆</div>
-
-        <h2 id="finishTitle">Partida terminada</h2>
-
-        <p id="finishText"></p>
-
-        <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
-
-            <button
-                id="finishReplay"
-                class="btn"
-                onclick="finishAction('replay')">
-                🔁 NUEVA PARTIDA
-            </button>
-
-            <button
-                id="finishMenu"
-                class="btn btn2"
-                onclick="finishAction('menu')">
-                🏠 SALIR AL MENÚ PRINCIPAL
-            </button>
-
-        </div>
-
-    </div>
+<div id="eventPop" class="event-pop">
+  <div class="event-card">
+    <div id="eventIcon" class="event-icon">🎉</div>
+    <div id="eventTitle" class="event-title">¡PALABRA!</div>
+    <div id="eventSub" class="event-sub"></div>
+  </div>
 </div>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-
 <script>
-const socket=io(),
-      CODE={{codigo|tojson}},
-      UID={{user.id|tojson}};
+const socket=io(),CODE={{codigo|tojson}},UID={{user.id|tojson}};
+const IS_PREMIUM={{ 1 if user.premium else 0 }};
+let state=null,lastSeq=-1,finishActionDone=false,lastOverKey='',lastRound=0;
+const ALPHABET="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("");
 
-let state=null,
-    lastSeq=-1,
-    finishShown=false,
-    finishActionDone=false;
-
-function tone(freq=440,d=.12,type='sine'){
-    try{
-        let a=new(window.AudioContext||webkitAudioContext)(),
-            o=a.createOscillator(),
-            g=a.createGain();
-
-        o.type=type;
-        o.frequency.value=freq;
-        o.connect(g);
-        g.connect(a.destination);
-        g.gain.setValueAtTime(.12,a.currentTime);
-        g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);
-        o.start();
-        o.stop(a.currentTime+d);
-    }catch(e){}
+function tone(freq=440,d=.12,type='sine',vol=.12){
+  try{const C=window.AudioContext||window.webkitAudioContext,a=new C(),o=a.createOscillator(),g=a.createGain();
+    o.type=type;o.frequency.value=freq;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(vol,a.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);o.start();o.stop(a.currentTime+d);
+  }catch(e){}
 }
-
-function fanfare(){
-    [523,659,784,1047].forEach(
-        (f,i)=>setTimeout(()=>tone(f,.35,'triangle'),i*150)
-    );
-}
-
-function me(){
-    return state?.players.findIndex(
-        p=>String(p.id||'')===String(UID)
-    )??-1;
-}
+function soundHit(){tone(760,.14,'triangle');setTimeout(()=>tone(980,.1,'sine'),70)}
+function soundMiss(){tone(180,.16,'sawtooth',.11);setTimeout(()=>tone(120,.22,'square',.08),80)}
+function fanfare(){[523,659,784,1047,1318].forEach((f,i)=>setTimeout(()=>tone(f,.28,'triangle'),i*120))}
+function loseSound(){[330,250,180,110].forEach((f,i)=>setTimeout(()=>tone(f,.28,'sawtooth',.1),i*140))}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function myIndex(){return state?.players?.findIndex(p=>String(p.id??'')===String(UID))??-1}
+function playerLabel(p){return p.bot?'🤖 CPU':'👤 Jugador'}
 
 function renderPlayers(){
-    players.innerHTML=state.players.map((p,i)=>
-        `<div class="player ${state.turn===i?'active':''}">
-            <b>${p.bot?'🤖':'👤'} ${p.name}</b><br>
-            <span class="medal">⭐ ${p.stars||0}</span>
-            · 🏆 ${state.wins?.[i]||0}
-        </div>`
-    ).join('');
-
-    series.textContent=
-        `Partida ${state.round||1} · A ${state.target||1} victorias`;
+  const box=document.getElementById('players');
+  box.innerHTML=(state.players||[]).slice(0,2).map((p,i)=>`
+    <div class="hang-player ${state.turn===i?'active':''}">
+      <div class="name">${playerLabel(p)} · ${esc(p.name)}</div>
+      <div class="score">⭐ ${p.stars||0} · 🏆 ${state.wins?.[i]||0} victorias</div>
+    </div>`).join('');
 }
 
-document.querySelectorAll('.target').forEach(
-    b=>b.onclick=()=>CONFIG(+b.dataset.n)
-);
-
-function CONFIG(n){
-    socket.emit("hang_config",{
-        code:CODE,
-        target:n
-    });
+function renderHangman(errors){
+  const e=Math.min(Number(errors)||0,7);
+  const parts=[
+    ['hangHead','head'],['body','body'],['body','body'],['body','body'],
+    ['body','body'],['body','body'],['body','body']
+  ];
+  document.querySelectorAll('#hangBody .body,#hangHead').forEach(x=>x.style.visibility='hidden');
+  document.getElementById('hangHead').classList.remove('dead');
+  const body=document.querySelectorAll('#hangBody .body');
+  if(e>=1)document.getElementById('hangHead').style.visibility='visible';
+  for(let i=0;i<Math.min(6,e);i++)body[i].style.visibility='visible';
+  if(e>=7){document.getElementById('hangHead').classList.add('dead');body.forEach(x=>x.classList.add('dead'))}
 }
 
-socket.emit("hang_join",{
-    code:CODE
-});
-
-function showFinishScreen(){
-
-    if(finishShown)return;
-
-    finishShown=true;
-
-    let title="🏆 Partida terminada";
-    let text="";
-
-    if(state.winner===null){
-
-        finishIcon.textContent="💀";
-        title="Nadie acertó";
-        text=`La palabra era: ${state.word}`;
-
-    }else{
-
-        finishIcon.textContent="🏆";
-        title=`${state.players[state.winner].name} gana`;
-        text=`La palabra era: ${state.word}`;
-
-    }
-
-    finishTitle.textContent=title;
-    finishText.textContent=text;
-
-    finishOverlay.classList.remove("hidden");
+function renderLetters(){
+  const used=new Set(state.used||[]);
+  document.getElementById('letters').innerHTML=ALPHABET.map(l=>{
+    const u=used.has(l);
+    return `<button class="letter ${u?'used':''}" ${u||state.over?'disabled':''} onclick="pick('${l}')">${l}</button>`;
+  }).join('');
+}
+function render(){
+  if(!state)return;
+  renderPlayers();renderHangman(state.errors||0);renderLetters();
+  document.getElementById('word').textContent=state.masked||'';
+  document.getElementById('errorCount').textContent=`${state.errors||0} / 7`;
+  document.getElementById('progressBar').style.width=`${Math.min(100,((state.errors||0)/7)*100)}%`;
+  document.getElementById('series').textContent=`Partida ${state.round||1} · A ${state.target||1} victoria${(state.target||1)===1?'':'s'}`;
+  const mi=myIndex(),mine=state.turn===mi&&!state.over;
+  document.getElementById('status').textContent=state.over
+    ? (state.winner===null?'💀 Palabra no acertada':`🏆 ${state.players[state.winner]?.name||'Ganador'}`)
+    : (mine?'🎯 TU TURNO':`⏳ Turno de ${state.players[state.turn]?.name||'rival'}`);
+  document.getElementById('turnMsg').textContent=state.over
+    ? (state.winner===mi?'🎉 ¡Has acertado!':'💥 Partida terminada')
+    : (mine?'Elige una letra':'Espera al rival…');
+  document.getElementById('reveal').textContent=state.over?`Palabra: ${state.word||'—'}`:'';
 }
 
-const IS_PREMIUM = {{ 1 if user.premium else 0 }};
+function showEvent(icon,title,sub,win=false){
+  const pop=document.getElementById('eventPop');document.getElementById('eventIcon').textContent=icon;
+  document.getElementById('eventTitle').textContent=title;document.getElementById('eventSub').textContent=sub||'';
+  pop.classList.add('show');setTimeout(()=>pop.classList.remove('show'),2800);
+  if(win){document.getElementById('word').classList.add('winword');setTimeout(()=>document.getElementById('word').classList.remove('winword'),800)}
+}
+function pick(l){if(!state||state.over||state.turn!==myIndex())return;socket.emit('hang_letter',{code:CODE,letter:l})}
+function CONFIG(n){socket.emit('hang_config',{code:CODE,target:n})}
+function requestNextWord(){
+  if(!state||!state.over)return;
+  /*
+   * El servidor debe aceptar hang_next_round para iniciar otra palabra
+   * sin abandonar el campeonato. Si la versión del backend aún no lo
+   * implementa, este botón no alterará el estado.
+   */
+  socket.emit('hang_next_round',{code:CODE});
+}
 function finishAction(action){
-
-    if(finishActionDone)return;
-
-    finishActionDone=true;
-
-    /*
-     * Si es Premium, continúa directamente sin anuncio.
-     */
-    if(IS_PREMIUM){
-
-        continueAfterAd(action);
-        return;
-
-    }
-
-    /*
-     * Usuario normal: mostrar anuncio.
-     */
-    if(window.AndroidAds){
-
-        window.AndroidAds.partidaTerminada();
-
-        setTimeout(function(){
-
-            continueAfterAd(action);
-
-        },700);
-
-    }else{
-
-        continueAfterAd(action);
-
-    }
+  if(finishActionDone)return;
+  finishActionDone=true;
+  if(IS_PREMIUM){continueAfterAd(action);return}
+  if(window.AndroidAds){window.AndroidAds.partidaTerminada();setTimeout(()=>continueAfterAd(action),700)}
+  else continueAfterAd(action);
 }
 function continueAfterAd(action){
-
-    if(action==="menu"){
-
-        location.href="/menu";
-
-    }else{
-
-        /*
-         * Recarga la partida para comenzar de nuevo.
-         */
-        location.reload();
-
-    }
+  if(action==='menu'){location.href="{{url_for('juegos')}}";return}
+  socket.emit('hang_next_round',{code:CODE});
+  setTimeout(()=>{finishActionDone=false},900);
 }
 
-socket.on("hang_state",s=>{
-
-    state=s;
-
-    renderPlayers();
-
-    setup.classList.toggle(
-        "hidden",
-        state.configured ||
-        String(state.host_id)!==String(UID)
-    );
-
-    status.textContent=
-        state.over
-        ? (
-            state.winner===null
-            ? "💀 Nadie acertó"
-            : `🏆 ${state.players[state.winner].name} gana`
-          )
-        : `Turno: ${state.players[state.turn].name}`;
-
-    word.textContent=state.masked;
-
-    drawing.textContent=[
-        "🪢",
-        "🙂",
-        "😐",
-        "😟",
-        "😨",
-        "😵",
-        "💀",
-        "☠️"
-    ][Math.min(state.errors,7)];
-
-    reveal.textContent=
-        state.over
-        ? `Palabra: ${state.word}`
-        : "";
-
-    letters.innerHTML=
-        "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"
-        .split("")
-        .map(l=>
-            `<button
-                class="btn btn2"
-                ${state.used.includes(l)||state.over?'disabled':''}
-                onclick="pick('${l}')">
-                ${l}
-            </button>`
-        ).join('');
-
-    if(state.seq!==lastSeq){
-
-        lastSeq=state.seq;
-
-        if(state.event){
-
-            tone(
-                state.event.type==="hit"?760:170,
-                .18,
-                state.event.type==="hit"
-                    ? 'triangle'
-                    : 'sawtooth'
-            );
-        }
-
-        if(state.over){
-
-            if(state.winner!==null){
-                fanfare();
-            }
-
-            /*
-             * Solo mostramos el resultado.
-             * EL ANUNCIO NO SE MUESTRA AQUÍ.
-             */
-            showFinishScreen();
-        }
+function handleState(s){
+  const prev=state;state=s;render();
+  const ev=s.event;
+  if(s.seq!==lastSeq){
+    lastSeq=s.seq;
+    if(ev?.type==='hit')soundHit(); else if(ev?.type==='miss')soundMiss();
+  }
+  if(s.over){
+    const key=`${CODE}_${s.round||1}_${s.winner}_${s.word||''}`;
+    if(key!==lastOverKey){
+      lastOverKey=key;
+      const won=s.winner===myIndex();
+      if(won){fanfare();showEvent('🎉','¡PALABRA ACERTADA!',`¡${s.players?.[myIndex()]?.name||'Has ganado'} ha ganado la partida!`,true)}
+      else {loseSound();showEvent('💀','¡PARTIDA TERMINADA!',`La palabra era: ${s.word||'—'}`)}
+      document.getElementById('newWordBtn').classList.remove('hidden');
+      document.getElementById('menuBtn').classList.remove('hidden');
     }
+  }else{
+    document.getElementById('newWordBtn').classList.add('hidden');
+    document.getElementById('menuBtn').classList.add('hidden');
+  }
+  if(prev?.round!==s.round){lastOverKey='';finishActionDone=false}
+  if(s.champ_over){
+    document.getElementById('newWordBtn').classList.add('hidden');
+    showEvent(s.winner===myIndex()?'🏆':'🥈',s.winner===myIndex()?'¡CAMPEÓN!':'CAMPEONATO TERMINADO',s.players?.[s.winner]?.name||'');
+  }
+}
+
+document.querySelectorAll('.target').forEach(b=>b.onclick=()=>CONFIG(+b.dataset.n));
+socket.emit('hang_join',{code:CODE});
+socket.on('hang_state',handleState);
+socket.on('app_error',d=>showEvent('⚠️','AVISO',d.message||'Ha ocurrido un error'));
+socket.on('hang_medal',d=>{
+  const e=document.createElement('div');e.className='medal-toast';e.textContent=`🏅 ${d.title||'Medalla'} · +${d.stars||0} ⭐`;
+  document.body.appendChild(e);setTimeout(()=>e.remove(),3500);
 });
-
-function pick(l){
-
-    if(!state||state.over)return;
-
-    socket.emit("hang_letter",{
-        code:CODE,
-        letter:l
-    });
-}
 </script>
-
 {% endblock %}
