@@ -405,6 +405,14 @@ function fleetHtml(sunk){
 }
 function renderBattle(){
  const myTurn=state.battle&&state.turn===state.viewer&&!state.round_over;
+ const ownSunk=state.own_sunk||[];
+ const fleetRemaining=Math.max(0,SHIPS.length-ownSunk.length);
+ bnShipsLeft.textContent=fleetRemaining;
+ if(state.round_over){
+   bnMessage.textContent=state.winner===state.viewer?'🏆 ¡Has ganado esta partida!':'💥 Has perdido esta partida.';
+ }else if(state.battle){
+   bnMessage.textContent=myTurn?'🎯 TU TURNO — Dispara al enemigo':'⏳ TURNO DEL RIVAL — Espera su disparo';
+ }
  bnOwnBattle.innerHTML=state.own_board.map((v,i)=>{
    const st=state.own_received[i];
    return `<button class="bn-cell ${v?'ship':''} ${st===1?'miss':''} ${st===2?'hit':''} ${st===3?'blocked':''}" disabled>${fireHtml(st)}</button>`
