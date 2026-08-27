@@ -48,6 +48,15 @@
  .hangman-box{min-height:220px}.hangman-svg{height:215px}.hang-players{grid-template-columns:1fr 1fr}.hang-player{font-size:11px;padding:7px}
  .letter{min-width:34px;height:34px;font-size:12px}.word{letter-spacing:.16em}.hang-pill{font-size:11px;padding:7px}
 }
+
+.duel-hangmen{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch}
+.fighter{background:#0d1930dd;border:1px solid var(--line);border-radius:16px;padding:7px;text-align:center;transition:.2s}
+.fighter.active{outline:2px solid var(--gold);box-shadow:0 0 20px #ffd43b55;transform:translateY(-2px)}
+.fighter-name{font-weight:1000;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fighter-errors{color:#9fb3cb;font-size:10px;font-weight:900;margin:2px}
+.hangman-box.compact{min-height:180px;padding:3px;border:0;background:#06120f55}
+.compact .hangman-svg{height:175px}
+@media(max-width:700px){.duel-hangmen{gap:5px}.fighter{padding:4px}.fighter-name{font-size:11px}.fighter-errors{font-size:9px}.hangman-box.compact{min-height:145px}.compact .hangman-svg{height:140px}}
 </style>
 
 <div class="hang-shell">
@@ -62,23 +71,48 @@
 
   <div class="hang-arena">
     <div class="hang-stage">
-      <div class="hangman-box">
-        <svg class="hangman-svg" viewBox="0 0 300 270" aria-label="Muñeco del ahorcado">
-          <line class="wood" x1="35" y1="245" x2="260" y2="245"/>
-          <line class="wood" x1="75" y1="245" x2="75" y2="35"/>
-          <line class="wood" x1="75" y1="38" x2="205" y2="38"/>
-          <line class="rope" x1="205" y1="38" x2="205" y2="68"/>
-          <g id="hangBody">
-            <circle id="hangHead" class="head" cx="205" cy="92" r="24"/>
-            <line class="body" x1="205" y1="116" x2="205" y2="178"/>
-            <line class="body" x1="205" y1="130" x2="170" y2="155"/>
-            <line class="body" x1="205" y1="130" x2="240" y2="155"/>
-            <line class="body" x1="205" y1="178" x2="178" y2="218"/>
-            <line class="body" x1="205" y1="178" x2="232" y2="218"/>
-          </g>
-        </svg>
+      <div class="duel-hangmen">
+        <div class="fighter" id="fighter0">
+          <div class="fighter-name" id="fighterName0">👤 Jugador 1</div>
+          <div class="fighter-errors" id="fighterErrors0">0 / 7 errores</div>
+          <div class="hangman-box compact">
+            <svg class="hangman-svg" viewBox="0 0 300 270">
+              <line class="wood" x1="35" y1="245" x2="260" y2="245"/>
+              <line class="wood" x1="75" y1="245" x2="75" y2="35"/>
+              <line class="wood" x1="75" y1="38" x2="205" y2="38"/>
+              <line class="rope" x1="205" y1="38" x2="205" y2="68"/>
+              <g id="hangBody0">
+                <circle id="hangHead0" class="head" cx="205" cy="92" r="24"/>
+                <line class="body" x1="205" y1="116" x2="205" y2="178"/>
+                <line class="body" x1="205" y1="130" x2="170" y2="155"/>
+                <line class="body" x1="205" y1="130" x2="240" y2="155"/>
+                <line class="body" x1="205" y1="178" x2="178" y2="218"/>
+                <line class="body" x1="205" y1="178" x2="232" y2="218"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div class="fighter" id="fighter1">
+          <div class="fighter-name" id="fighterName1">👤 Rival</div>
+          <div class="fighter-errors" id="fighterErrors1">0 / 7 errores</div>
+          <div class="hangman-box compact">
+            <svg class="hangman-svg" viewBox="0 0 300 270">
+              <line class="wood" x1="35" y1="245" x2="260" y2="245"/>
+              <line class="wood" x1="75" y1="245" x2="75" y2="35"/>
+              <line class="wood" x1="75" y1="38" x2="205" y2="38"/>
+              <line class="rope" x1="205" y1="38" x2="205" y2="68"/>
+              <g id="hangBody1">
+                <circle id="hangHead1" class="head" cx="205" cy="92" r="24"/>
+                <line class="body" x1="205" y1="116" x2="205" y2="178"/>
+                <line class="body" x1="205" y1="130" x2="170" y2="155"/>
+                <line class="body" x1="205" y1="130" x2="240" y2="155"/>
+                <line class="body" x1="205" y1="178" x2="178" y2="218"/>
+                <line class="body" x1="205" y1="178" x2="232" y2="218"/>
+              </g>
+            </svg>
+          </div>
+        </div>
       </div>
-
       <div class="hang-right">
         <div id="turnMsg" class="turn-msg">Preparando partida…</div>
         <div id="word" class="word"></div>
@@ -86,10 +120,12 @@
         <div class="progress"><i id="progressBar" style="width:0%"></i></div>
         <div id="letters" class="letters" style="margin-top:14px"></div>
         <div class="actions">
-             <button id="menuBtn" class="btn secondary hidden" onclick="finishAction('menu')">🏠 JUEGOS</button>
+          <button id="menuBtn" class="btn secondary hidden" onclick="finishAction('menu')">🏠 JUEGOS</button>
         </div>
       </div>
     </div>
+  </div>
+  </div>
   </div>
 </div>
 
@@ -131,8 +167,22 @@ function tone(freq=440,d=.12,type='sine',vol=.12){
 }
 function soundHit(){tone(760,.14,'triangle');setTimeout(()=>tone(980,.1,'sine'),70)}
 function soundMiss(){tone(180,.16,'sawtooth',.11);setTimeout(()=>tone(120,.22,'square',.08),80)}
-function fanfare(){[523,659,784,1047,1318].forEach((f,i)=>setTimeout(()=>tone(f,.28,'triangle'),i*120))}
-function loseSound(){[330,250,180,110].forEach((f,i)=>setTimeout(()=>tone(f,.28,'sawtooth',.1),i*140))}
+function fanfare(){
+  [523,659,784,1047,1318,1568].forEach((f,i)=>setTimeout(()=>tone(f,.28,i%2?'triangle':'sine',.14),i*100));
+}
+function loseSound(){
+  [330,250,180,110,80].forEach((f,i)=>setTimeout(()=>tone(f,.3,'sawtooth',.1),i*120));
+}
+function victoryBurst(){
+  for(let i=0;i<26;i++){
+    const e=document.createElement('span');
+    e.textContent=i%2?'✨':'🏆';
+    e.style.cssText=`position:fixed;left:${5+Math.random()*90}vw;top:-30px;z-index:3000;font-size:${16+Math.random()*22}px;transition:transform 1.7s ease,opacity 1.7s ease`;
+    document.body.appendChild(e);
+    requestAnimationFrame(()=>{e.style.transform=`translate(${(Math.random()-.5)*160}px,${65+Math.random()*90}vh) rotate(${Math.random()*700-350}deg)`;e.style.opacity='0'});
+    setTimeout(()=>e.remove(),1800);
+  }
+}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function myIndex(){return state?.players?.findIndex(p=>String(p.id??'')===String(UID))??-1}
 function playerLabel(p){return p.bot?'🤖 CPU':'👤 Jugador'}
@@ -147,17 +197,23 @@ function renderPlayers(){
 }
 
 function renderHangman(errors){
-  const e=Math.min(Number(errors)||0,7);
-  const parts=[
-    ['hangHead','head'],['body','body'],['body','body'],['body','body'],
-    ['body','body'],['body','body'],['body','body']
-  ];
-  document.querySelectorAll('#hangBody .body,#hangHead').forEach(x=>x.style.visibility='hidden');
-  document.getElementById('hangHead').classList.remove('dead');
-  const body=document.querySelectorAll('#hangBody .body');
-  if(e>=1)document.getElementById('hangHead').style.visibility='visible';
-  for(let i=0;i<Math.min(6,e);i++)body[i].style.visibility='visible';
-  if(e>=7){document.getElementById('hangHead').classList.add('dead');body.forEach(x=>x.classList.add('dead'))}
+  const arr=Array.isArray(errors)?errors:[0,0];
+  for(let s=0;s<2;s++){
+    const e=Math.min(Number(arr[s]||0),7);
+    const head=document.getElementById('hangHead'+s);
+    const body=document.querySelectorAll('#hangBody'+s+' .body');
+    if(!head)continue;
+    head.style.visibility='hidden';
+    head.classList.remove('dead');
+    body.forEach(x=>{x.style.visibility='hidden';x.classList.remove('dead')});
+    if(e>=1)head.style.visibility='visible';
+    for(let i=0;i<Math.min(6,e);i++)body[i].style.visibility='visible';
+    if(e>=7){head.classList.add('dead');body.forEach(x=>x.classList.add('dead'))}
+    const er=document.getElementById('fighterErrors'+s);
+    if(er)er.textContent=`${e} / 7 errores`;
+    const f=document.getElementById('fighter'+s);
+    if(f)f.classList.toggle('active',!state.over && state.turn===s);
+  }
 }
 
 function renderLetters(){
@@ -170,10 +226,10 @@ function renderLetters(){
 function render(){
   if(!state)return;
   updateSeriesSetup();
-  renderPlayers();renderHangman(state.errors||0);renderLetters();
+  renderPlayers();renderHangman(state.errors||[0,0]);renderLetters();
   document.getElementById('word').textContent=state.masked||'';
-  document.getElementById('errorCount').textContent=`${state.errors||0} / 7`;
-  document.getElementById('progressBar').style.width=`${Math.min(100,((state.errors||0)/7)*100)}%`;
+  document.getElementById('errorCount').textContent=`${(state.errors||[0,0])[myIndex()]||0} / 7` ;
+  document.getElementById('progressBar').style.width=`${Math.min(100,(((state.errors||[0,0])[myIndex()]||0)/7)*100)}%`;
   document.getElementById('series').textContent=`Partida ${state.round||1} · A ${state.target||1} victoria${(state.target||1)===1?'':'s'}`;
   const mi=myIndex(),mine=state.turn===mi&&!state.over;
   document.getElementById('status').textContent=state.over
@@ -223,32 +279,43 @@ function finishAction(action){
 }
 function continueAfterAd(action){
   if(action==='menu'){location.href="{{url_for('juegos')}}";return}
-  socket.emit('hang_next_round',{code:CODE});
-  setTimeout(()=>{finishActionDone=false},900);
+  finishActionDone=false;
 }
 
 function handleState(s){
-  const prev=state;state=s;render();
+  const prev=state;
+  state=s;
+  render();
+
   const ev=s.event;
   if(s.seq!==lastSeq){
     lastSeq=s.seq;
-    if(ev?.type==='hit')soundHit(); else if(ev?.type==='miss')soundMiss();
-  }
-  if(s.over){
-    const key=`${CODE}_${s.round||1}_${s.winner}_${s.word||''}`;
-    if(key!==lastOverKey){
-      lastOverKey=key;
-      const won=s.winner===myIndex();
-      if(won){fanfare();showEvent('🎉','¡PALABRA ACERTADA!',`¡${s.players?.[myIndex()]?.name||'Has ganado'} ha ganado la partida!`,true)}
-      else {loseSound();showEvent('💀','¡PARTIDA TERMINADA!',`La palabra era: ${s.word||'—'}`)}
-      document.getElementById('menuBtn').classList.remove('hidden');
+    if(ev?.type==='hit')soundHit();
+    else if(ev?.type==='miss')soundMiss();
+    else if(ev?.type==='word_win'){
+      const winnerName=s.players?.[ev.winner]?.name||'Jugador';
+      fanfare();
+      victoryBurst();
+      showEvent('🏆','¡PALABRA COMPLETADA!',`${winnerName} gana esta ronda`,true);
     }
+    else if(ev?.type==='word_lose'){
+      loseSound();
+      showEvent('💀','¡AHORCADO!',`La palabra era: ${s.word||'—'}`);
+    }
+  }
+
+  if(s.over && s.champ){
+    const won=s.winner===myIndex();
+    showEvent(won?'🏆':'🥈',won?'¡CAMPEÓN!':'¡CAMPEONATO TERMINADO!',
+      `${s.players?.[s.winner]?.name||'Rival'} consigue ${s.wins?.[s.winner]||0} victorias`,won);
+    document.getElementById('menuBtn').classList.remove('hidden');
   }else{
     document.getElementById('menuBtn').classList.add('hidden');
   }
-  if(prev?.round!==s.round){lastOverKey='';finishActionDone=false}
-  if(s.champ){
-    showEvent(s.winner===myIndex()?'🏆':'🥈',s.winner===myIndex()?'¡CAMPEÓN!':'CAMPEONATO TERMINADO',s.players?.[s.winner]?.name||'');
+
+  if(prev?.round!==s.round){
+    lastOverKey='';
+    finishActionDone=false;
   }
 }
 

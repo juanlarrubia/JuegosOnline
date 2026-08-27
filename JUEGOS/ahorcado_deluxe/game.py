@@ -5,10 +5,467 @@ import random
 
 SLUG = "ahorcado_deluxe"
 WORDS = [
-    "ELEFANTE","ORDENADOR","MARIPOSA","CHOCOLATE","AVENTURA",
-    "CASTILLO","GUITARRA","PLANETA","BIBLIOTECA","TORMENTA",
-    "DINOSAURIO","CARRETERA","FANTASMA","PIRAMIDE","TELEFONO",
-    "MONTAÑA","SEMÁFORO","HELICOPTERO","CANGURO","LABERINTO"
+'ELEFANTE',
+'ORDENADOR',
+'MARIPOSA',
+'CHOCOLATE',
+'AVENTURA',
+'CASTILLO',
+'GUITARRA',
+'PLANETA',
+'BIBLIOTECA',
+'TORMENTA',
+'DINOSAURIO',
+'CARRETERA',
+'FANTASMA',
+'PIRAMIDE',
+'TELEFONO',
+'MONTAÑA',
+'SEMAFORO',
+'HELICOPTERO',
+'CANGURO',
+'LABERINTO',
+'AGUA',
+'AIRE',
+'AMIGO',
+'AMIGA',
+'ANIMAL',
+'ARANA',
+'ARBOL',
+'ARENA',
+'ARMADURA',
+'ARTISTA',
+'AVESTRUZ',
+'AVELLANA',
+'AVELLANO',
+'BACON',
+'BAILARINA',
+'BALCON',
+'BARRERA',
+'BASTON',
+'BATERIA',
+'BEISBOL',
+'BIGOTE',
+'BINGO',
+'BLUSA',
+'BOCADILLO',
+'BOLSA',
+'BORRADOR',
+'BRASIL',
+'BRONCE',
+'BROCHA',
+'BURBUJA',
+'CABINA',
+'CADENA',
+'CACTUS',
+'CAFETERA',
+'CALABAZA',
+'CALCETIN',
+'CALLEJON',
+'CAMELLO',
+'CAMISA',
+'CAMPANA',
+'CAMPING',
+'CANICA',
+'CANTINA',
+'CAPA',
+'CAPITAN',
+'CARAMELO',
+'CASTANA',
+'CEBRA',
+'CEMENTO',
+'CENTRO',
+'CEPILLO',
+'CEREBRO',
+'CESTA',
+'CHIMENEA',
+'CHORIZO',
+'CHUPETE',
+'CIELO',
+'CIGARRO',
+'CINTA',
+'CIRUELA',
+'CLASE',
+'COCODRILO',
+'COLA',
+'COMETA',
+'CONEJO',
+'CONFITE',
+'CORAL',
+'CORCHO',
+'CORTADOR',
+'CRAYON',
+'CREMA',
+'CRUZ',
+'CUADRO',
+'CUENTO',
+'CUNA',
+'CURA',
+'DADO',
+'DAGA',
+'DAMA',
+'DANZA',
+'DEPORTE',
+'DEDO',
+'DELFIN',
+'DENTADURA',
+'DESIERTO',
+'DIAMANTE',
+'DIARIO',
+'DICCIONARIO',
+'DULCE',
+'ECO',
+'EDAD',
+'EDREDON',
+'EJERCITO',
+'EMBUDO',
+'ENCHUFE',
+'ENTRADA',
+'ENVASE',
+'ESCALERA',
+'ESCARABAJO',
+'ESCRITOR',
+'ESCRITORIO',
+'ESPADA',
+'ESPAGUETI',
+'ESPEJO',
+'ESTACION',
+'ESTANQUE',
+'ESTUCHE',
+'EXAMEN',
+'FAROL',
+'FELICIDAD',
+'FERIA',
+'FERROCARRIL',
+'FIEBRE',
+'FIGURA',
+'FLAUTA',
+'FLOR',
+'FONDO',
+'FUENTE',
+'GALLETA',
+'GANSO',
+'GARBANZO',
+'GAVIOTA',
+'GOMA',
+'GORRA',
+'GRILLO',
+'GRUA',
+'HADA',
+'HAMBURGUESA',
+'HAMSTER',
+'HARINA',
+'HERRADURA',
+'HIELO',
+'HORMIGA',
+'HUERTO',
+'IGUANA',
+'INSECTO',
+'ISLA',
+'JABALI',
+'JARDINERA',
+'JARRON',
+'JEFE',
+'JINETE',
+'JOYA',
+'JUEVES',
+'LADRILLO',
+'LAGO',
+'LANA',
+'LAPTOP',
+'LATA',
+'LECHERO',
+'LIMONERO',
+'LINTERNAS',
+'LINTERNA',
+'LOBO',
+'LOCOMOTORA',
+'LUNA',
+'MACETA',
+'MAESTRO',
+'MAGIA',
+'MANGO',
+'MANO',
+'MANTEL',
+'MAQUETA',
+'MAQUINA',
+'MAR',
+'MARCO',
+'MARTES',
+'MEDICINA',
+'MELON',
+'MERMELADA',
+'MESA',
+'METRO',
+'MONEDA',
+'MONO',
+'MONTANA',
+'MOSQUITO',
+'MOTORCICLETA',
+'MUEBLE',
+'MUNECA',
+'NARANJO',
+'NARIZ',
+'NAVEGANTE',
+'NEGOCIO',
+'NIDO',
+'NOCHE',
+'NOMBRE',
+'NOVIA',
+'NOVIEMBRE',
+'NUBE',
+'NUEZ',
+'OCEANO',
+'OLIVA',
+'OLIVO',
+'OREJA',
+'ORO',
+'OTONO',
+'PADRE',
+'PAJARITO',
+'PALA',
+'PALOMA',
+'PAN',
+'PANTANO',
+'PANTALON',
+'PAPAYA',
+'PATO',
+'PECERA',
+'PEINE',
+'PELUCHE',
+'PEPINO',
+'PERA',
+'PERSONA',
+'PIANISTA',
+'PIEDRA',
+'PILAR',
+'PINCEL',
+'PINGUINO',
+'PINTOR',
+'PIPA',
+'PISCINA',
+'PLANTA',
+'PLATILLO',
+'PLUMA',
+'POEMA',
+'POMELO',
+'PORTERO',
+'PRADO',
+'PREMIO',
+'PRIMERO',
+'PUERTO',
+'QUESERA',
+'QUESITO',
+'RADIO',
+'RANA',
+'RAPIDO',
+'RATON',
+'REGLA',
+'RELOJERO',
+'RINOCERONTE',
+'RIO',
+'ROPA',
+'RUEDA',
+'SABOR',
+'SAL',
+'SALTAMONTES',
+'SANDIA',
+'SAPO',
+'SARTEN',
+'SECRETO',
+'SEMILLA',
+'SERPIENTE',
+'SIERRA',
+'SILBATO',
+'SILLA',
+'SIRENA',
+'SOBRE',
+'SOMBRERO',
+'SONIDO',
+'SOPA',
+'TACO',
+'TAMBOR',
+'TAPIZ',
+'TECHO',
+'TERMOMETRO',
+'TIENDA',
+'TIGRE',
+'TIJERA',
+'TIMBRE',
+'TORTA',
+'TORTUGA',
+'TRABAJO',
+'TRAJE',
+'TRANVIA',
+'TRENZA',
+'TRUENO',
+'TUBO',
+'TURISMO',
+'UVA',
+'VACA',
+'VALLE',
+'VASO',
+'VELA',
+'VECINO',
+'VENTILADOR',
+'VERDURA',
+'VIAJE',
+'VIDRIO',
+'VIENTO',
+'VIOLETA',
+'VIRUS',
+'VOLANTE',
+'WAGON',
+'XILOFONO',
+'YEGUA',
+'ZANAHORIA',
+'ZORRA',
+'ABUELO',
+'ABUELA',
+'ACTOR',
+'ACTRIZ',
+'ALCACHOFA',
+'ALDEA',
+'ALGODON',
+'ALMACEN',
+'AMBULANCIA',
+'ANGEL',
+'ANTIGUO',
+'APIO',
+'APLAUSO',
+'ARCO',
+'ARMARIO',
+'ARROYO',
+'ASIENTO',
+'AVIONETA',
+'AZOTEA',
+'BAILAR',
+'BARRIO',
+'BASTIDOR',
+'BIBLIA',
+'BODEGA',
+'BOMBERO',
+'BOTON',
+'BRAZO',
+'BUFANDA',
+'CABLE',
+'CACHORRO',
+'CALENDARIO',
+'CANCION',
+'CANTARO',
+'CARBON',
+'CARNAVAL',
+'CARTON',
+'CASA',
+'CEBOLLA',
+'CELULAR',
+'CERRO',
+'CERVEZA',
+'CHISTE',
+'CHUBASQUERO',
+'CILINDRO',
+'COLUMNA',
+'CONCHA',
+'CORREDOR',
+'CRISTAL',
+'CUCHARON',
+'CUERNO',
+'DIBUJANTE',
+'DIBUJO',
+'DOCTOR',
+'DOMINGO',
+'ESCULTURA',
+'ESQUEMA',
+'FABRICA',
+'FAMILIA',
+'FANTASIA',
+'FARMACIA',
+'FIESTA',
+'FILTRO',
+'FUEGO',
+'GAFAS',
+'GIMNASIO',
+'GLACIAR',
+'GLOBO',
+'GOLFIN',
+'GORILA',
+'GRANIZO',
+'GUITARRISTA',
+'HABITANTE',
+'HILO',
+'HOGAR',
+'HORMIGUERO',
+'HOTEL',
+'HUELLA',
+'HUMO',
+'IGLESIA',
+'IMAGEN',
+'IMPRESORA',
+'INVIERNO',
+'JUGADOR',
+'LAGUNA',
+'LANCHA',
+'LECTURA',
+'LIBRERIA',
+'LIMONADA',
+'LLAVE',
+'LLUVIA',
+'MAESTRA',
+'MADERA',
+'MANDARINA',
+'MANZANA',
+'MAPA',
+'MARMOL',
+'MEDALLON',
+'MERCADO',
+'MICROONDAS',
+'MINUTO',
+'MOCHILA',
+'MONITOR',
+'MUSEO',
+'NARVAL',
+'NIEBLA',
+'NOTICIA',
+'NOVELA',
+'OBJETO',
+'OFICINA',
+'PALACIO',
+'PARED',
+'PASILLO',
+'PASTEL',
+'PELICULA',
+'PESCADO',
+'PESCADOR',
+'PIZARRA',
+'PLATANO',
+'POLLO',
+'PRINCIPE',
+'PRINCESA',
+'PUZZLE',
+'RELOJ',
+'RINCON',
+'SABADO',
+'SALSA',
+'SALTAR',
+'SANDALIA',
+'SEMANA',
+'SOMBRA',
+'TARTA',
+'TEATRO',
+'TELESCOPIO',
+'TORNILLO',
+'TRAPO',
+'TROMPETA',
+'UNIVERSIDAD',
+'VACUNA',
+'VENTANA',
+'VERANO',
+'VESTIDO',
+'VETERINARIO',
+'VIDEO',
+'VIOLIN',
+'ZAPATILLA',
+'ZAPATERO'
 ]
 
 
@@ -27,38 +484,30 @@ def register(app, socketio, active_rooms, current_user, friends_of):
         )
 
     def fresh(r):
-        players = r.get("players", [])
+        players = r.get("players", [])[:2]
         n = len(players)
-        if n < 1:
+        if n < 2:
             return
 
-        ser = r.setdefault(
-            "hang_series",
-            {
-                "configured": False,
-                "target": 1,
-                "wins": [0] * n,
-                "round": 0,
-                "champ": False,
-            }
-        )
+        ser = r.setdefault("hang_series", {
+            "configured": False,
+            "target": 1,
+            "wins": [0, 0],
+            "round": 0,
+            "champ": False,
+        })
+        old = list(ser.get("wins", []))
+        ser["wins"] = (old + [0, 0])[:2]
+        ser["round"] = int(ser.get("round", 0)) + 1
 
-        # Mantener exactamente una puntuación por jugador.
-        if len(ser["wins"]) != n:
-            old = list(ser.get("wins", []))
-            ser["wins"] = (old + [0] * n)[:n]
-
-        ser["round"] += 1
-
-        # Cada ronda utiliza una palabra aleatoria.
         word = random.choice(WORDS)
-
         r["hang"] = {
             "word": word,
             "used": [],
-            "errors": 0,
+            # Errores independientes: cada muñeco representa a su jugador.
+            "errors": [0, 0],
             "max_errors": 7,
-            "turn": (ser["round"] - 1) % n,
+            "turn": (ser["round"] - 1) % 2,
             "over": False,
             "winner": None,
             "seq": 0,
@@ -69,11 +518,9 @@ def register(app, socketio, active_rooms, current_user, friends_of):
     def pub(r):
         g = r["hang"]
         ser = r["hang_series"]
+        players = r.get("players", [])[:2]
 
-        masked = " ".join(
-            c if c in g["used"] else "_"
-            for c in g["word"]
-        )
+        masked = " ".join(c if c in g["used"] else "_" for c in g["word"])
 
         return {
             "players": [
@@ -83,17 +530,17 @@ def register(app, socketio, active_rooms, current_user, friends_of):
                     "bot": p.get("bot", False),
                     "stars": p.get("stars", 0),
                 }
-                for p in r["players"][:2]
+                for p in players
             ],
             "host_id": r["host_id"],
-            "configured": ser["configured"],
-            "target": ser["target"],
-            "wins": ser["wins"],
-            "round": ser["round"],
-            "champ": ser["champ"],
+            "configured": bool(ser.get("configured")),
+            "target": int(ser.get("target", 1)),
+            "wins": list(ser.get("wins", [0, 0]))[:2],
+            "round": int(ser.get("round", 0)),
+            "champ": bool(ser.get("champ")),
             "masked": masked,
-            "used": g["used"],
-            "errors": g["errors"],
+            "used": list(g["used"]),
+            "errors": list(g["errors"]),
             "max_errors": g["max_errors"],
             "turn": g["turn"],
             "over": g["over"],
@@ -113,28 +560,40 @@ def register(app, socketio, active_rooms, current_user, friends_of):
     def finish(r, winner):
         g = r["hang"]
         ser = r["hang_series"]
-
         if g["over"]:
             return
 
         g["over"] = True
         g["winner"] = winner
+        g["seq"] += 1
 
         if winner is not None:
             ser["wins"][winner] += 1
             ser["champ"] = ser["wins"][winner] >= ser["target"]
+            g["event"] = {
+                "type": "word_win",
+                "winner": winner,
+                "seq": g["seq"],
+            }
+        else:
+            # La palabra se agota para el jugador que estaba jugando.
+            g["event"] = {
+                "type": "word_lose",
+                "winner": None,
+                "seq": g["seq"],
+            }
 
         emit_all(r)
 
-        # Si aún no hay campeón, se prepara automáticamente otra palabra.
-        # Así una palabra acertada NO termina el campeonato.
         if not ser["champ"]:
             code = r["code"]
 
             def nxt():
-                socketio.sleep(3.5)
+                socketio.sleep(3.2)
                 rr = active_rooms.get(code)
                 if not rr or rr.get("game") != SLUG:
+                    return
+                if len(rr.get("players", [])) < 2:
                     return
                 fresh(rr)
                 emit_all(rr)
@@ -144,18 +603,21 @@ def register(app, socketio, active_rooms, current_user, friends_of):
 
     def act(r, s, letter):
         g = r["hang"]
+        players = r.get("players", [])[:2]
+        if len(players) < 2:
+            return
 
         if (
             g["over"]
             or s != g["turn"]
             or letter in g["used"]
             or len(letter) != 1
+            or letter not in "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"
         ):
             return
 
         g["used"].append(letter)
         g["seq"] += 1
-
         hit = letter in g["word"]
         g["event"] = {
             "type": "hit" if hit else "miss",
@@ -165,17 +627,21 @@ def register(app, socketio, active_rooms, current_user, friends_of):
         }
 
         if not hit:
-            g["errors"] += 1
+            g["errors"][s] += 1
 
+        # Palabra completa = victoria de quien la completa.
         if all(c in g["used"] for c in g["word"]):
             finish(r, s)
             return
 
-        if g["errors"] >= g["max_errors"]:
-            finish(r, None)
+        # Cada jugador tiene su propio ahorcado.
+        # Si agota sus 7 errores, gana el rival.
+        if g["errors"][s] >= g["max_errors"]:
+            finish(r, 1 - s)
             return
 
-        g["turn"] = (g["turn"] + 1) % len(r["players"])
+        # Acierto: conserva el turno. Fallo: pasa al rival.
+        g["turn"] = s if hit else 1 - s
         emit_all(r)
         cpu(r)
 
@@ -275,9 +741,10 @@ def register(app, socketio, active_rooms, current_user, friends_of):
         ):
             return
 
-        # Nunca permitimos más de dos jugadores.
-        if len(r.get("players", [])) > 2:
-            r["players"] = r["players"][:2]
+        # La partida solo puede comenzar con anfitrión + rival/CPU.
+        if len(r.get("players", [])) != 2:
+            emit("app_error", {"message": "Esperando al segundo jugador para comenzar."})
+            return
 
         t = max(1, min(9, int(data.get("target", 1))))
 
