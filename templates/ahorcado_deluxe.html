@@ -247,7 +247,16 @@ function showEvent(icon,title,sub,win=false){
   pop.classList.add('show');setTimeout(()=>pop.classList.remove('show'),2800);
   if(win){document.getElementById('word').classList.add('winword');setTimeout(()=>document.getElementById('word').classList.remove('winword'),800)}
 }
-function pick(l){if(!state||state.over||state.turn!==myIndex())return;socket.emit('hang_letter',{code:CODE,letter:l})}
+function pick(l){
+  if(!state || state.over)return;
+  if(state.turn!==myIndex()){
+    document.getElementById('turnMsg').textContent='⏳ Espera al rival…';
+    document.getElementById('turnMsg').classList.add('shake');
+    setTimeout(()=>document.getElementById('turnMsg').classList.remove('shake'),320);
+    return;
+  }
+  socket.emit('hang_letter',{code:CODE,letter:l});
+}
 function updateSeriesSetup(){
   const overlay=document.getElementById('seriesSetup');
   const buttons=document.querySelector('.series-buttons');

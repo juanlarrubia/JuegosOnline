@@ -507,7 +507,7 @@ def register(app, socketio, active_rooms, current_user, friends_of):
             # Errores independientes: cada muñeco representa a su jugador.
             "errors": [0, 0],
             "max_errors": 7,
-            "turn": (ser["round"] - 1) % 2,
+            "turn": ser["starter"],
             "over": False,
             "winner": None,
             "seq": 0,
