@@ -502,6 +502,11 @@ def register(app, socketio, active_rooms, current_user, friends_of):
         ser["wins"] = (old + [0, 0])[:2]
         ser["round"] = int(ser.get("round", 0)) + 1
 
+        # Elegir aleatoriamente quién empieza ESTA ronda.
+        # Antes starter quedaba en None y por eso ambos clientes
+        # mostraban "Espera al rival..." indefinidamente.
+        ser["starter"] = random.randint(0, 1)
+
         word = random.choice(WORDS)
         r["hang"] = {
             "word": word,
@@ -509,7 +514,7 @@ def register(app, socketio, active_rooms, current_user, friends_of):
             # Errores independientes: cada muñeco representa a su jugador.
             "errors": [0, 0],
             "max_errors": 7,
-            "turn": ser["starter"],
+            "turn": int(ser.get("starter", random.randint(0, 1))),
             "over": False,
             "winner": None,
             "seq": 0,
