@@ -729,31 +729,40 @@ def register(app, socketio, active_rooms, current_user, friends_of):
     @socketio.on("hang_config")
     def config(data):
         u = current_user()
-        r = active_rooms.get(
-            str(data.get("code", "")).upper()
-        )
+        r = active_rooms.get(str(data.get("code", "")).upper())
 
-        # Solo el anfitrión puede configurar la serie.
-        if (
-            not u
-            or not r
-            or str(r["host_id"]) != str(u["id"])
-        ):
+        if not u or not r or r.get("game") != SLUG:
             return
 
-        # La partida solo puede comenzar con anfitrión + rival/CPU.
-        if len(r.get("players", [])) != 2:
-            emit("app_error", {"message": "Esperando al segundo jugador para comenzar."})
+        # Solo el anfitrión puede elegir la serie.
+        if str(r["host_id"]) != str(u["id"]):
             return
 
-        t = max(1, min(9, int(data.get("target", 1))))
+        players = r.get("players", [])[:2]
 
+        # CPU cuenta como segundo participante. Si el modo CPU todavía no
+        # hubiese terminado de añadirlo, no bloqueamos silenciosamente:
+        # dejamos que el juego continúe solo si ya hay dos plazas.
+        if len(players) < 2:
+            emit("app_error", {
+                "message": "Espera a que entre el rival o se prepare la CPU."
+            })
+            return
+
+        try:
+            t = int(data.get("target", 1))
+        except (TypeError, ValueError):
+            t = 1
+        t = max(1, min(9, t))
+
+        r["players"] = players
         r["hang_series"] = {
             "configured": True,
             "target": t,
-            "wins": [0] * len(r["players"]),
+            "wins": [0, 0],
             "round": 0,
             "champ": False,
+            "starter": None
         }
 
         fresh(r)

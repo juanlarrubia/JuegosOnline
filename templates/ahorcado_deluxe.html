@@ -133,7 +133,7 @@
   <div class="series-card">
     <div style="font-size:58px">🏆</div>
     <h2>Campeonato de Ahorcado</h2>
-    <p>¿Cuántas partidas hay que ganar para ser campeón?</p>
+    <p id="hostQuestion">¿Cuántas partidas hay que ganar para ser campeón?</p>
     <div class="series-buttons">
       <button class="btn target" data-n="1">1</button>
       <button class="btn secondary target" data-n="2">2</button>
@@ -261,29 +261,33 @@ function updateSeriesSetup(){
   const overlay=document.getElementById('seriesSetup');
   const buttons=document.querySelector('.series-buttons');
   const wait=document.getElementById('waitHost');
-  if(!state)return;
+  const question=document.getElementById('hostQuestion');
+  if(!state || !overlay)return;
 
-  const configured=!!state.configured;
+  const isHost = String(state.host_id) === String(UID);
+  const configured = !!state.configured;
 
-  // IMPORTANTE: la pantalla de selección SOLO existe para el anfitrión.
-  // El rival nunca debe ver el overlay ni sus botones.
-  const isHost = String(state.host_id ?? '').trim() === String(UID ?? '').trim();
-
-  if(configured || !isHost){
+  // El invitado NO ve jamás el selector.
+  if(!isHost){
     overlay.style.display='none';
-    buttons.classList.add('hidden');
-    wait.classList.add('hidden');
     return;
   }
 
-  // Solo el anfitrión llega aquí.
+  // El anfitrión ve el selector hasta que configura.
+  if(configured){
+    overlay.style.display='none';
+    return;
+  }
+
   overlay.style.display='flex';
   buttons.classList.remove('hidden');
   wait.classList.add('hidden');
+  if(question) question.textContent='¿Cuántas partidas hay que ganar para ser campeón?';
 }
 function CONFIG(n){
   if(!state || String(state.host_id)!==String(UID) || state.configured)return;
   socket.emit('hang_config',{code:CODE,target:n});
+});
 }
 function requestNextWord(){return;}
 function finishAction(action){
