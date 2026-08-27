@@ -129,11 +129,11 @@
   </div>
 </div>
 
-<div id="seriesSetup" class="series-overlay">
+<div id="seriesSetup" class="series-overlay" style="display:none">
   <div class="series-card">
     <div style="font-size:58px">🏆</div>
     <h2>Campeonato de Ahorcado</h2>
-    <p id="hostQuestion">¿Cuántas partidas hay que ganar para ser campeón?</p>
+    <p>¿Cuántas partidas hay que ganar para ser campeón?</p>
     <div class="series-buttons">
       <button class="btn target" data-n="1">1</button>
       <button class="btn secondary target" data-n="2">2</button>
@@ -231,7 +231,7 @@ function render(){
   document.getElementById('errorCount').textContent=`${(state.errors||[0,0])[myIndex()]||0} / 7` ;
   document.getElementById('progressBar').style.width=`${Math.min(100,(((state.errors||[0,0])[myIndex()]||0)/7)*100)}%`;
   document.getElementById('series').textContent=`Partida ${state.round||1} · A ${state.target||1} victoria${(state.target||1)===1?'':'s'}`;
-  const mi=myIndex(),mine=state.turn===mi&&!state.over;
+  const mi=myIndex(),mine=state.turn!==null && state.turn===mi&&!state.over;
   document.getElementById('status').textContent=state.over
     ? (state.winner===null?'💀 Palabra no acertada':`🏆 ${state.players[state.winner]?.name||'Ganador'}`)
     : (mine?'🎯 TU TURNO':`⏳ Turno de ${state.players[state.turn]?.name||'rival'}`);
@@ -261,33 +261,29 @@ function updateSeriesSetup(){
   const overlay=document.getElementById('seriesSetup');
   const buttons=document.querySelector('.series-buttons');
   const wait=document.getElementById('waitHost');
-  const question=document.getElementById('hostQuestion');
-  if(!state || !overlay)return;
+  if(!state)return;
 
-  const isHost = String(state.host_id) === String(UID);
-  const configured = !!state.configured;
+  const configured=!!state.configured;
 
-  // El invitado NO ve jamás el selector.
-  if(!isHost){
+  // IMPORTANTE: la pantalla de selección SOLO existe para el anfitrión.
+  // El rival nunca debe ver el overlay ni sus botones.
+  const isHost = String(state.host_id ?? '').trim() === String(UID ?? '').trim();
+
+  if(configured || !isHost){
     overlay.style.display='none';
+    buttons.classList.add('hidden');
+    wait.classList.add('hidden');
     return;
   }
 
-  // El anfitrión ve el selector hasta que configura.
-  if(configured){
-    overlay.style.display='none';
-    return;
-  }
-
+  // Solo el anfitrión llega aquí.
   overlay.style.display='flex';
   buttons.classList.remove('hidden');
   wait.classList.add('hidden');
-  if(question) question.textContent='¿Cuántas partidas hay que ganar para ser campeón?';
 }
 function CONFIG(n){
   if(!state || String(state.host_id)!==String(UID) || state.configured)return;
   socket.emit('hang_config',{code:CODE,target:n});
-});
 }
 function requestNextWord(){return;}
 function finishAction(action){

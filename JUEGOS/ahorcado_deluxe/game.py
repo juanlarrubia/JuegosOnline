@@ -1,6 +1,7 @@
 from JUEGOS.simple_multiplayer import register_simple_game
 from flask_socketio import emit, join_room
 import random
+from uuid import uuid4
 
 
 SLUG = "ahorcado_deluxe"
@@ -495,6 +496,7 @@ def register(app, socketio, active_rooms, current_user, friends_of):
             "wins": [0, 0],
             "round": 0,
             "champ": False,
+            "starter": None,
         })
         old = list(ser.get("wins", []))
         ser["wins"] = (old + [0, 0])[:2]
@@ -516,8 +518,25 @@ def register(app, socketio, active_rooms, current_user, friends_of):
         }
 
     def pub(r):
-        g = r["hang"]
-        ser = r["hang_series"]
+        ser = r.setdefault("hang_series", {
+            "configured": False,
+            "target": 1,
+            "wins": [0, 0],
+            "round": 0,
+            "champ": False,
+            "starter": None,
+        })
+        g = r.get("hang") or {
+            "word": "",
+            "used": [],
+            "errors": [0, 0],
+            "max_errors": 7,
+            "turn": None,
+            "over": False,
+            "winner": None,
+            "seq": 0,
+            "event": None,
+        }
         players = r.get("players", [])[:2]
 
         masked = " ".join(c if c in g["used"] else "_" for c in g["word"])
@@ -711,16 +730,19 @@ def register(app, socketio, active_rooms, current_user, friends_of):
         join_room("hang_" + r["code"])
 
         if "hang_series" not in r:
-            n = min(2, len(r.get("players", [])))
             r["hang_series"] = {
                 "configured": False,
                 "target": 1,
-                "wins": [0] * n,
+                "wins": [0, 0],
                 "round": 0,
                 "champ": False,
+                "starter": None,
             }
 
-        if "hang" not in r:
+        # No creamos la ronda hasta que el anfitrión elija la serie.
+        # Así el invitado solo espera y nunca se bloquea en una ronda
+        # parcialmente inicializada.
+        if r["hang_series"].get("configured") and "hang" not in r:
             fresh(r)
 
         emit("hang_state", pub(r))
@@ -740,14 +762,20 @@ def register(app, socketio, active_rooms, current_user, friends_of):
 
         players = r.get("players", [])[:2]
 
-        # CPU cuenta como segundo participante. Si el modo CPU todavía no
-        # hubiese terminado de añadirlo, no bloqueamos silenciosamente:
-        # dejamos que el juego continúe solo si ya hay dos plazas.
+        # Ahorcado siempre necesita exactamente dos participantes.
+        # En modo CPU normalmente ya existe el bot desde create_mode_room.
+        # Si por una sala antigua no estuviera, añadimos una CPU automáticamente.
         if len(players) < 2:
-            emit("app_error", {
-                "message": "Espera a que entre el rival o se prepare la CPU."
+            players.append({
+                "id": "cpu_" + uuid4().hex[:8],
+                "name": "CPU Nova",
+                "bot": True,
+                "fake_user": False,
+                "stars": 0,
+                "score": 0,
+                "streak": 0,
             })
-            return
+            r["players"] = players
 
         try:
             t = int(data.get("target", 1))
