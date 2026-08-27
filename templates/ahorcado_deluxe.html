@@ -38,7 +38,7 @@
 .series-overlay{position:fixed;inset:0;z-index:900;background:#000b;display:flex;align-items:center;justify-content:center;padding:16px}
 .series-card{background:#101d35;border:2px solid #526d96;border-radius:22px;padding:23px;max-width:430px;width:92%;text-align:center;box-shadow:0 20px 60px #000b}
 .series-card.hidden{display:none}.series-card h2{margin:4px 0 8px}.series-card p{color:#c5d3e5;font-size:12px}
-.series-buttons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:15px}
+.series-buttons{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:15px}.series-buttons.hidden{display:none!important}
 .medal-toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:2000;background:#14223a;border:1px solid #ffd43b;border-radius:13px;padding:10px 15px;font-weight:1000;box-shadow:0 10px 30px #0009}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes pop{from{transform:scale(.45) rotate(-5deg);opacity:0}70%{transform:scale(1.08) rotate(2deg)}to{transform:scale(1);opacity:1}}
 @keyframes shake{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
@@ -86,8 +86,7 @@
         <div class="progress"><i id="progressBar" style="width:0%"></i></div>
         <div id="letters" class="letters" style="margin-top:14px"></div>
         <div class="actions">
-          <button id="newWordBtn" class="btn hidden" onclick="requestNextWord()">🆕 NUEVA PALABRA</button>
-          <button id="menuBtn" class="btn secondary hidden" onclick="finishAction('menu')">🏠 JUEGOS</button>
+             <button id="menuBtn" class="btn secondary hidden" onclick="finishAction('menu')">🏠 JUEGOS</button>
         </div>
       </div>
     </div>
@@ -170,6 +169,7 @@ function renderLetters(){
 }
 function render(){
   if(!state)return;
+  updateSeriesSetup();
   renderPlayers();renderHangman(state.errors||0);renderLetters();
   document.getElementById('word').textContent=state.masked||'';
   document.getElementById('errorCount').textContent=`${state.errors||0} / 7`;
@@ -192,16 +192,28 @@ function showEvent(icon,title,sub,win=false){
   if(win){document.getElementById('word').classList.add('winword');setTimeout(()=>document.getElementById('word').classList.remove('winword'),800)}
 }
 function pick(l){if(!state||state.over||state.turn!==myIndex())return;socket.emit('hang_letter',{code:CODE,letter:l})}
-function CONFIG(n){socket.emit('hang_config',{code:CODE,target:n})}
-function requestNextWord(){
-  if(!state||!state.over)return;
-  /*
-   * El servidor debe aceptar hang_next_round para iniciar otra palabra
-   * sin abandonar el campeonato. Si la versión del backend aún no lo
-   * implementa, este botón no alterará el estado.
-   */
-  socket.emit('hang_next_round',{code:CODE});
+function updateSeriesSetup(){
+  const overlay=document.getElementById('seriesSetup');
+  const buttons=document.querySelector('.series-buttons');
+  const wait=document.getElementById('waitHost');
+  if(!state)return;
+  const configured=!!state.configured;
+  const isHost=String(state.host_id)===String(UID);
+  if(configured){
+    overlay.style.display='none';
+    return;
+  }
+  overlay.style.display='flex';
+  buttons.classList.toggle('hidden',!isHost);
+  wait.classList.toggle('hidden',isHost);
+  if(isHost) wait.textContent='Elige cuántas partidas hay que ganar para comenzar.';
+  else wait.textContent='⏳ Esperando al anfitrión…';
 }
+function CONFIG(n){
+  if(!state || String(state.host_id)!==String(UID) || state.configured)return;
+  socket.emit('hang_config',{code:CODE,target:n});
+}
+function requestNextWord(){return;}
 function finishAction(action){
   if(finishActionDone)return;
   finishActionDone=true;
@@ -229,16 +241,13 @@ function handleState(s){
       const won=s.winner===myIndex();
       if(won){fanfare();showEvent('🎉','¡PALABRA ACERTADA!',`¡${s.players?.[myIndex()]?.name||'Has ganado'} ha ganado la partida!`,true)}
       else {loseSound();showEvent('💀','¡PARTIDA TERMINADA!',`La palabra era: ${s.word||'—'}`)}
-      document.getElementById('newWordBtn').classList.remove('hidden');
       document.getElementById('menuBtn').classList.remove('hidden');
     }
   }else{
-    document.getElementById('newWordBtn').classList.add('hidden');
     document.getElementById('menuBtn').classList.add('hidden');
   }
   if(prev?.round!==s.round){lastOverKey='';finishActionDone=false}
-  if(s.champ_over){
-    document.getElementById('newWordBtn').classList.add('hidden');
+  if(s.champ){
     showEvent(s.winner===myIndex()?'🏆':'🥈',s.winner===myIndex()?'¡CAMPEÓN!':'CAMPEONATO TERMINADO',s.players?.[s.winner]?.name||'');
   }
 }

@@ -1335,7 +1335,7 @@ def create_mode_room(game,host_user,opponent=None,opponent_kind=None):
         max_players={"uno_deluxe":8,"domino_deluxe":4,"dobble_deluxe":8,
                      "subastado_deluxe":4,"barquitos_deluxe":4,
                      "oca_deluxe":4,"serpientes_deluxe":4,"brisca_deluxe":4,
-                     "conecta4_deluxe":2,"damas_deluxe":2,"ahorcado_deluxe":4,"poker_deluxe":4,"blackjack_deluxe":4}.get(game,4)
+                     "conecta4_deluxe":2,"damas_deluxe":2,"ahorcado_deluxe":2,"poker_deluxe":4,"blackjack_deluxe":4}.get(game,4)
         code=uuid4().hex[:6].upper()
         room={
             "code":code,"game":game,"game_name":meta["name"],
