@@ -22,7 +22,7 @@ box-shadow:0 24px 65px #0009,inset 0 0 70px #00190f99;overflow:hidden;padding:18
 .br-captured .count{background:#07151fdd;border:1px solid #ffffff33;border-radius:999px;padding:3px 6px;font-size:9px;font-weight:950}
 .br-captured.me{left:18%;bottom:14%}.br-captured.top{left:18%;top:13%}.br-captured.left{left:9%;top:35%}.br-captured.right{right:9%;top:35%}
 .br-flying-card{position:fixed;z-index:9998;width:74px;height:114px;object-fit:cover;border-radius:7px;border:2px solid #f1e5d6;box-shadow:0 12px 28px #000a;pointer-events:none;transition:transform .52s cubic-bezier(.2,.8,.2,1),opacity .52s}
-.br-stock.clickable{cursor:pointer;filter:drop-shadow(0 0 10px #ffd83d)}
+.br-stock.clickable{cursor:default;filter:drop-shadow(0 0 10px #ffd83d)}
 .br-player .backs img{width:54px;height:83px;object-fit:cover;border-radius:6px;border:2px solid #f6e8d8;box-shadow:0 5px 10px #0008;margin-left:-30px}
 .br-player .backs img:first-child{margin-left:0}
 .br-top{top:12px;left:50%;transform:translateX(-50%)}
@@ -183,6 +183,7 @@ box-shadow:0 24px 65px #0009,inset 0 0 70px #00190f99;overflow:hidden;padding:18
 'use strict';
 const CODE={{ codigo|tojson }};
 const ME={{ user.id|tojson }};
+const IS_PREMIUM={{ (user.premium|default(0))|int|tojson }};
 const BACK="{{url_for('static',filename='brisca_cards/back.jpg')}}";
 const PLAY_SOUND="{{url_for('static',filename='audio/card_play_real.wav')}}";
 const DRAW_SOUND="{{url_for('static',filename='audio/card_draw_real.wav')}}";
@@ -465,7 +466,7 @@ function render(){
  let statusText=
  state.phase==='over'?'🏁 PARTIDA TERMINADA':
  state.phase==='trick_pause'?'🏆 '+(state.message||'BAZA TERMINADA'):
- state.phase==='draw'?(state.can_draw?'🂠 TE TOCA ROBAR · pulsa el mazo':('🂠 '+(state.message||'ROBO DE CARTAS'))):
+ state.phase==='draw'?'🂠 ROBO AUTOMÁTICO · '+(state.message||'preparando la siguiente carta…'):
  state.phase==='exchange'?(state.exchange_seat===state.my_seat?'🔄 PUEDES CAMBIAR LA MUESTRA':('🔄 '+(state.message||'CAMBIO DE MUESTRA'))):
  (state.turn===state.my_seat?'👉 TU TURNO':('🎴 TURNO DE '+(turnP?turnP.name:'')));
 

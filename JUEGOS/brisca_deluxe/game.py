@@ -35,7 +35,7 @@ def register(app,socketio,active_rooms,current_user,friends_of):
             "muestra":muestra,
             "trump":muestra["s"],
             "trick":[],
-            "leader":0,
+            "leader":random.randrange(nplayers),
             "turn":0,
             "scores":[0 for _ in range(nplayers)],
             "captured":[[] for _ in range(nplayers)],
@@ -50,7 +50,10 @@ def register(app,socketio,active_rooms,current_user,friends_of):
             "winner":None,
             "started":True,
             "cpu_pending_token":None,
+            "draw_pending_token":None,
         }
+        # El jugador inicial se sortea en cada nueva partida/serie.
+        r["brisca"]["turn"]=r["brisca"]["leader"]
 
     def seat_for(r,uid):
         for i,p in enumerate(r.get("players",[])):
@@ -104,6 +107,39 @@ def register(app,socketio,active_rooms,current_user,friends_of):
         g["hands"][seat][opt["index"]]=old
         return True
 
+    def schedule_auto_draw(r):
+        g=r.get("brisca")
+        if not g or g.get("over") or g.get("phase")!="draw":
+            return
+        seat=g.get("turn")
+        if seat is None:
+            return
+        token=(g.get("leader"), g.get("draw_pos"), seat, len(g.get("stock",[])), bool(g.get("muestra")))
+        if g.get("draw_pending_token")==token:
+            return
+        g["draw_pending_token"]=token
+        code=r["code"]
+
+        def auto_draw():
+            socketio.sleep(0.75)
+            rr=active_rooms.get(code)
+            if not rr or rr.get("game")!=SLUG or "brisca" not in rr:
+                return
+            gg=rr["brisca"]
+            if gg.get("draw_pending_token")!=token:
+                return
+            gg["draw_pending_token"]=None
+            if gg.get("phase")!="draw" or gg.get("turn")!=seat or gg.get("over"):
+                return
+            if draw_one(rr,seat):
+                gg["message"]=rr["players"][seat]["name"]+" roba automáticamente."
+                emit_states(rr)
+                if gg.get("phase")=="draw":
+                    schedule_auto_draw(rr)
+                maybe_cpu(code)
+
+        socketio.start_background_task(auto_draw)
+
     def prepare_draw_phase(r,winner):
         g=r["brisca"]; n=len(r["players"])
         # Roba primero quien gana la baza y luego en sentido de juego.
@@ -115,6 +151,7 @@ def register(app,socketio,active_rooms,current_user,friends_of):
         g["phase"]="draw"
         g["turn"]=order[0]
         g["exchange_seat"]=None
+        g["draw_pending_token"]=None
 
         # Si ya no queda ninguna carta para robar, continúa directamente.
         if not g["stock"] and g.get("muestra") is None:
@@ -122,6 +159,8 @@ def register(app,socketio,active_rooms,current_user,friends_of):
             g["turn"]=winner
             if all(len(h)==0 for h in g["hands"]):
                 finish_game(r)
+        else:
+            schedule_auto_draw(r)
 
     def draw_one(r,seat):
         g=r["brisca"]
@@ -148,6 +187,7 @@ def register(app,socketio,active_rooms,current_user,friends_of):
                 finish_game(r)
         else:
             g["turn"]=g["draw_order"][g["draw_pos"]]
+            schedule_auto_draw(r)
         return True
 
     def finish_game(r):
@@ -318,12 +358,8 @@ def register(app,socketio,active_rooms,current_user,friends_of):
             emit_states(r)
 
         elif expected_phase=="draw":
-            if g.get("turn")!=expected_seat:return
-            if expected_seat<0 or expected_seat>=len(r["players"]):return
-            if not r["players"][expected_seat].get("bot"):return
-            if draw_one(r,expected_seat):
-                g["message"]=r["players"][expected_seat]["name"]+" roba una carta."
-                emit_states(r)
+            # El robo es automático para jugadores y CPU.
+            return
 
         elif expected_phase=="exchange":
             if g.get("exchange_seat")!=expected_seat:return
@@ -433,13 +469,8 @@ def register(app,socketio,active_rooms,current_user,friends_of):
 
     @socketio.on("brisca_draw")
     def br_draw(data):
-        u=current_user();code=str(data.get("code","")).upper();r=active_rooms.get(code)
-        if not u or not r or r.get("game")!=SLUG or "brisca" not in r:return
-        seat=seat_for(r,u["id"])
-        if seat is not None and draw_one(r,seat):
-            r["brisca"]["message"]=r["players"][seat]["name"]+" roba una carta."
-            emit_states(r)
-            maybe_cpu(code)
+        # El mazo NO es interactivo. El servidor roba automáticamente.
+        return
 
     @socketio.on("brisca_exchange")
     def br_exchange(data):
